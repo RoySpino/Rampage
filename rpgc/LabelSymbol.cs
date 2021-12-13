@@ -6,15 +6,18 @@ using System.Threading.Tasks;
 
 namespace rpgc
 {
-    public sealed class VariableSymbol
+    class LabelSymbol
     {
-        public string Name;
-        public Type type;
+        public string Name { get; }
 
-        internal VariableSymbol(string name, Type t)
+        public LabelSymbol(string name)
         {
             Name = name;
-            type = t;
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }

@@ -1,151 +1,124 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
+using System.Collections.Immutable;
 
-namespace rpgc
+namespace rpgc.Syntax
 {
     public abstract class SyntaxNode
     {
-        public TokenKind kind;
+        public abstract TokenKind kind { get; }
 
-        public SyntaxNode()
+        // /////////////////////////////////////////////////////////////////////////
+        public IEnumerable<SyntaxNode> getCildren()
         {
-            kind = 0;
-        }
-        public abstract IEnumerable<SyntaxNode> getCildren();
-    }
+            PropertyInfo[] properties;
+            IEnumerable<SyntaxNode> children = null;
+            SyntaxNode chd;
+            SeperatedSyntaxList lst;
 
+            properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-    // /////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     //
-    // ///////////////////////////////////////////////////////////////////////
-    public class ExpresionSyntax : SyntaxNode
-    {
-
-        // constructor (SyntaxToken) is handeld on number expresion
-        public override IEnumerable<SyntaxNode> getCildren()
-        {
-            yield return null;
-        }
-    }
-
-
-    // /////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     //
-    // ///////////////////////////////////////////////////////////////////////
-    // NumberExpressionSyntaxpressionSyntax
-    public sealed class LiteralExpressionSyntax : ExpresionSyntax
-    {
-        public SyntaxToken LiteralToken;
-        public object value;
-
-        public LiteralExpressionSyntax(SyntaxToken token) : this(token, token.sym)
-        {
-        }
-
-        public LiteralExpressionSyntax(SyntaxToken token, object Value)
-        {
-            kind = TokenKind.TK_LITEXPR;
-
-            // assign literal type
-            switch (token.tok)
+            foreach (PropertyInfo prop in properties)
             {
-                case TokenKind.TK_INTEGER:
-                case TokenKind.TK_ZONED:
-                case TokenKind.TK_PACKED:
-                    value = Convert.ToInt32(Value);
-                    break;
-                default:
-                    value = Value;
-                    break;
+                if (typeof(SyntaxNode).IsAssignableFrom(prop.PropertyType))
+                {
+                    chd = (SyntaxNode)prop.GetValue(this);
+                    if (chd != null)
+                        yield return chd;
+                }
+                else
+                {
+                    if (typeof(SeperatedSyntaxList).IsAssignableFrom(prop.PropertyType))
+                    {
+                        lst = (SeperatedSyntaxList)prop.GetValue(this);
+
+                        foreach (SyntaxNode arg in lst.getWithSeperators())
+                            yield return arg;
+                    }
+                    else
+                    {
+                        if (typeof(IEnumerable<SyntaxNode>).IsAssignableFrom(prop.PropertyType))
+                        {
+                            children = (IEnumerable<SyntaxNode>)prop.GetValue(this);
+                            foreach (SyntaxNode child in children)
+                            {
+                                if (child != null)
+                                    yield return child;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // /////////////////////////////////////////////////////////////////////////
+        public virtual TextSpan span
+        {
+            get
+            {
+                TextSpan first = getCildren().First().span;
+                TextSpan last = getCildren().First().span;
+                return TextSpan.fromBounds(first.START, last.END, first.LineNo, first.LinePos);
+            }
+        }
+
+        // /////////////////////////////////////////////////////////////////////////
+        public SyntaxToken GetLastToken()
+        {
+            if (this is SyntaxToken token)
+                return token;
+
+            // A syntax node should always contain at least 1 token.
+            return getCildren().Last().GetLastToken();
+        }
+
+        // /////////////////////////////////////////////////////////////////////////
+        private static void printTree(TextWriter textWriter, SyntaxNode node, string indent = "", bool isLast = true)
+        {
+            SyntaxNode lastChild;
+
+            if (node == null)
+                return;
+
+            string marker = ((isLast == true) ? "└──" : "├──");
+            textWriter.Write(indent + marker + node.kind);
+
+            if (node is SyntaxToken)
+            {
+                SyntaxToken t = (SyntaxToken)node;
+                textWriter.Write(" " + t.sym);
             }
 
-            LiteralToken = token;
-            LiteralToken.kind = LiteralToken.tok;
+            textWriter.WriteLine("");
+
+            indent += ((isLast == true) ? "   " : "│  ");
+
+            lastChild = node.getCildren().LastOrDefault();
+
+            foreach (SyntaxNode child in node.getCildren())
+                printTree(textWriter, child, indent, child == lastChild);
         }
 
-        public override IEnumerable<SyntaxNode> getCildren()
+        // /////////////////////////////////////////////////////////////////////////
+        public void writeTo(TextWriter writer)
         {
-            yield return LiteralToken;
+            printTree(writer, this);
         }
-    }
 
-
-    // /////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     //
-    // ///////////////////////////////////////////////////////////////////////
-    public sealed class BinaryExpressionSyntax : ExpresionSyntax
-    {
-        public ExpresionSyntax left, right;
-        public SyntaxToken operatorToken;
-
-        public BinaryExpressionSyntax(ExpresionSyntax A, SyntaxToken operaton, ExpresionSyntax B)
+        // /////////////////////////////////////////////////////////////////////////
+        public override string ToString()
         {
-            left = A;
-            right = B;
-            kind = TokenKind.TK_BYNARYEXPR;
-
-            operatorToken = operaton;
-            operatorToken.kind = operaton.tok;
+            using (var writer = new StringWriter())
+            {
+                writeTo(writer);
+                return writer.ToString();
+            }
         }
 
-        public override IEnumerable<SyntaxNode> getCildren()
-        {
-            yield return left;
-            yield return operatorToken;
-            yield return right;
-        }
-    }
-
-    // /////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     //
-    // ///////////////////////////////////////////////////////////////////////
-    public sealed class UinaryExpressionSyntax : ExpresionSyntax
-    {
-        public ExpresionSyntax right;
-        public SyntaxToken Operand;
-
-        public UinaryExpressionSyntax(SyntaxToken operand, ExpresionSyntax B)
-        {
-            right = B;
-            kind = TokenKind.TK_UNIEXP;
-
-            Operand = operand;
-            Operand.kind = operand.tok;
-        }
-
-        public override IEnumerable<SyntaxNode> getCildren()
-        {
-            yield return Operand;
-            yield return right;
-        }
-    }
-
-
-    // /////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     //
-    // ///////////////////////////////////////////////////////////////////////
-    public sealed class ParenthesizedExpression : ExpresionSyntax
-    {
-        SyntaxToken OPENParen, CLOSEParen;
-        public ExpresionSyntax Expression;
-
-        public ParenthesizedExpression(SyntaxToken openParen, ExpresionSyntax expression, SyntaxToken closeParen)
-        {
-            OPENParen = openParen;
-            CLOSEParen = closeParen;
-            Expression = expression;
-
-            kind = TokenKind.TK_PARENEXP;
-        }
-
-        public override IEnumerable<SyntaxNode> getCildren()
-        {
-            yield return OPENParen;
-            yield return Expression;
-            yield return CLOSEParen;
-        }
     }
 }

@@ -12,6 +12,21 @@
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,9 +47,19 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Rampage.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.5.0.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -44,29 +69,125 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Binding\Binder.cs" />
+    <Compile Include="Binding\BoundAssignmentExpression.cs" />
     <Compile Include="Binding\BoundBinExpression.cs" />
     <Compile Include="Binding\BoundBinOperator.cs" />
+    <Compile Include="Binding\BoundBlockStatement.cs" />
+    <Compile Include="Binding\BoundCallExpression.cs" />
+    <Compile Include="Binding\BoundConversionExpression.cs" />
+    <Compile Include="Binding\BoundErrorExpression.cs" />
+    <Compile Include="Binding\BoundErrorStatement.cs" />
+    <Compile Include="Binding\BoundExpression.cs" />
+    <Compile Include="Binding\BoundExpressionStatement.cs" />
+    <Compile Include="Binding\BoundForStatement.cs" />
+    <Compile Include="Binding\BoundGoToConditionalStatement.cs" />
+    <Compile Include="Binding\BoundGoToStatement.cs" />
+    <Compile Include="Binding\BoundIfStatement.cs" />
+    <Compile Include="Binding\BoundLabel.cs" />
+    <Compile Include="Binding\BoundLabelStatement.cs" />
+    <Compile Include="Binding\BoundLiteralExp.cs" />
+    <Compile Include="Binding\BoundGlobalScope.cs" />
+    <Compile Include="Binding\BoundLoopStatement.cs" />
+    <Compile Include="Binding\BoundNode.cs" />
+    <Compile Include="Binding\BoundNodeFactory.cs" />
+    <Compile Include="Binding\BoundNodePrinter.cs" />
+    <Compile Include="Binding\BoundProgram.cs" />
+    <Compile Include="Binding\BoundReturnStatement.cs" />
+    <Compile Include="Binding\BoundScope.cs" />
+    <Compile Include="Binding\BoundStatement.cs" />
+    <Compile Include="Binding\BoundTreeRewriter.cs" />
     <Compile Include="Binding\BoundUniExpression.cs" />
     <Compile Include="Binding\BoundUniOperator.cs" />
+    <Compile Include="Binding\BoundUntilStatement.cs" />
+    <Compile Include="Binding\boundVariableDeclaration.cs" />
+    <Compile Include="Binding\BoundVariableExpression.cs" />
+    <Compile Include="Binding\BoundWhileStatement.cs" />
+    <Compile Include="Binding\ControlFlowGraph.cs" />
+    <Compile Include="Binding\Conversion.cs" />
     <Compile Include="Complation.cs" />
+    <Compile Include="DiagnosticBag.cs" />
+    <Compile Include="Diagnostics.cs" />
     <Compile Include="EvaluationResult.cs" />
     <Compile Include="Evaluator.cs" />
+    <Compile Include="IO\TextWriterExtensions.cs" />
+    <Compile Include="LabelSymbol.cs" />
+    <Compile Include="Lowering\Lowerer.cs" />
+    <Compile Include="Repl.cs" />
+    <Compile Include="RpgRepl.cs" />
+    <Compile Include="Symbols\BuiltinFunctions.cs" />
+    <Compile Include="Symbols\FuncitonSymbol.cs" />
+    <Compile Include="Symbols\GlobalVariableSymbol.cs" />
+    <Compile Include="Symbols\LocalVariableSymbol.cs" />
+    <Compile Include="Symbols\ParamiterSymbol.cs" />
+    <Compile Include="Symbols\Symbol.cs" />
+    <Compile Include="Symbols\SymbolPrinter.cs" />
+    <Compile Include="Symbols\TypeSymbol.cs" />
     <Compile Include="Syntax\AssignmentExpressionSyntax.cs" />
+    <Compile Include="Syntax\BinaryExpressionSyntax.cs" />
+    <Compile Include="Syntax\BlockStatementSyntax.cs" />
+    <Compile Include="Syntax\BreakStamentSyntax.cs" />
+    <Compile Include="Syntax\CallExpressionSyntax.cs" />
+    <Compile Include="Syntax\CompilationUnit.cs" />
+    <Compile Include="Syntax\ContinueStamentSyntax.cs" />
     <Compile Include="Syntax\Decimator.cs" />
+    <Compile Include="Syntax\ElseStatementSyntax.cs" />
+    <Compile Include="Syntax\ErrorExpressionSyntax.cs" />
+    <Compile Include="Syntax\ErrorMemberSyntax.cs" />
+    <Compile Include="Syntax\ErrorStatementSyntax.cs" />
+    <Compile Include="Syntax\ExpresionSyntax.cs" />
+    <Compile Include="Syntax\ExpressionStatementSyntax.cs" />
+    <Compile Include="Syntax\ForStatementSyntax.cs" />
+    <Compile Include="Syntax\GlobalStatmentSyntax.cs" />
+    <Compile Include="Syntax\GoToStatementSyntax.cs" />
+    <Compile Include="Syntax\IfStatementSyntax.cs" />
     <Compile Include="Syntax\Lexer.cs" />
+    <Compile Include="Syntax\LiteralExpressionSyntax.cs" />
+    <Compile Include="Syntax\MemberSyntax.cs" />
     <Compile Include="Syntax\NamedExpressionSyntax.cs" />
+    <Compile Include="Syntax\ParamiterSyntax.cs" />
+    <Compile Include="Syntax\ParenthesizedExpression.cs" />
     <Compile Include="Syntax\Parser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Syntax\ProcedureDeclarationSyntax.cs" />
+    <Compile Include="Syntax\ReturnStatementSyntax.cs" />
+    <Compile Include="Syntax\SeperatedParamiterList.cs" />
+    <Compile Include="Syntax\SeperatedSyntaxList.cs" />
+    <Compile Include="Syntax\StatementSyntax.cs" />
     <Compile Include="Syntax\SyntaxFacts.cs" />
     <Compile Include="Syntax\SyntaxNode.cs" />
     <Compile Include="Syntax\SyntaxToken.cs" />
     <Compile Include="Syntax\SyntaxTree.cs" />
-    <Compile Include="TextSpan.cs" />
-    <Compile Include="VariableSymbol.cs" />
+    <Compile Include="Syntax\TagStatementSyntax.cs" />
+    <Compile Include="Syntax\TypeClauseSyntax.cs" />
+    <Compile Include="Syntax\UinaryExpressionSyntax.cs" />
+    <Compile Include="Syntax\UntilStatementSyntax.cs" />
+    <Compile Include="Syntax\VariableDeclarationSyntax.cs" />
+    <Compile Include="Syntax\WhileStatementSyntax.cs" />
+    <Compile Include="Text\SourceText.cs" />
+    <Compile Include="Text\TextLine.cs" />
+    <Compile Include="Text\TextSpan.cs" />
+    <Compile Include="Symbols\VariableSymbol.cs" />
+    <Compile Include="Text\TextSpanCompare.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Rampage.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

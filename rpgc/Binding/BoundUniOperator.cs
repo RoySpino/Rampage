@@ -2,23 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using rpgc.Syntax;
+using rpgc.Symbols;
 
 namespace rpgc.Binding
 {
     internal sealed class BoundUniOperator
     {
-        public TokenKind SyntaxKind;
-        public BoundUniOpToken tok;
-        public Type OperatorType, ResultType;
+        public TokenKind SyntaxKind { get; }
+        public BoundUniOpToken tok { get; }
+        public TypeSymbol OperatorType, ResultType;
         private static BoundUniOperator[] OPERATORS = {
-            new BoundUniOperator(TokenKind.TK_NOT, BoundUniOpToken.BUO_NOT, typeof(bool)),
-            new BoundUniOperator(TokenKind.TK_ADD, BoundUniOpToken.BUO_IDENTITY, typeof(int)),
-            new BoundUniOperator(TokenKind.TK_SUB, BoundUniOpToken.BUO_NEGATION, typeof(int))
+            new BoundUniOperator(TokenKind.TK_NOT, BoundUniOpToken.BUO_NOT, TypeSymbol.Indicator),
+            new BoundUniOperator(TokenKind.TK_ADD, BoundUniOpToken.BUO_IDENTITY, TypeSymbol.Integer),
+            new BoundUniOperator(TokenKind.TK_SUB, BoundUniOpToken.BUO_NEGATION, TypeSymbol.Integer)
         };
 
         // ///////////////////////////////////////////////////////////////////////////////
-        public BoundUniOperator(TokenKind syntaxKind, BoundUniOpToken op, Type operatorType)
+        public BoundUniOperator(TokenKind syntaxKind, BoundUniOpToken op, TypeSymbol operatorType)
         {
             SyntaxKind = syntaxKind;
             tok = op;
@@ -27,7 +28,7 @@ namespace rpgc.Binding
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
-        public BoundUniOperator(TokenKind syntaxKind, BoundUniOpToken op, Type operatorType, Type resultType)
+        public BoundUniOperator(TokenKind syntaxKind, BoundUniOpToken op, TypeSymbol operatorType, TypeSymbol resultType)
         {
             SyntaxKind = syntaxKind;
             tok = op;
@@ -36,7 +37,7 @@ namespace rpgc.Binding
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
-        public static BoundUniOperator bind(TokenKind kind, Type operandType)
+        public static BoundUniOperator bind(TokenKind kind, TypeSymbol operandType)
         {
             foreach (BoundUniOperator op in OPERATORS)
             {

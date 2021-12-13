@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,12 +9,13 @@ namespace rpgc
 {
     public class EvaluationResult
     {
-        public DiagnosticBag Diagnostics = new DiagnosticBag();
+        //public DiagnosticBag _Diagnostics = new DiagnosticBag();
+        public ImmutableArray<Diagnostics> _Diagnostics { get; }
         public object Value;
 
-        public EvaluationResult(DiagnosticBag diagnostics, object value)
+        public EvaluationResult(ImmutableArray<Diagnostics> diagnostics, object value)
         {
-            Diagnostics = diagnostics;
+            _Diagnostics = diagnostics;
             Value = value;
         }
     }

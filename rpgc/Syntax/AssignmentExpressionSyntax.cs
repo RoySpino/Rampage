@@ -8,22 +8,17 @@ namespace rpgc.Syntax
 {
     public class AssignmentExpressionSyntax : ExpresionSyntax
     {
-        public SyntaxToken IDENTIFIERTOKEN, ASSIGNMENTTOKEN;
-        public ExpresionSyntax EXPRESSION;
+        public override TokenKind kind => TokenKind.TK_ASSIGN;
+        public SyntaxToken IDENTIFIERTOKEN { get; }
+        public SyntaxToken ASSIGNMENTTOKEN { get; }
+        public ExpresionSyntax EXPRESSION { get; }
 
         public AssignmentExpressionSyntax(SyntaxToken identifier, SyntaxToken assignmentSymbol, ExpresionSyntax expression)
         {
             IDENTIFIERTOKEN = identifier;
             ASSIGNMENTTOKEN = assignmentSymbol;
             EXPRESSION = expression;
-            kind = TokenKind.TK_ASSIGN; ;
-        }
-
-        public override IEnumerable<SyntaxNode> getCildren()
-        {
-            yield return IDENTIFIERTOKEN;
-            yield return ASSIGNMENTTOKEN;
-            yield return EXPRESSION;
+            //kind = TokenKind.TK_ASSIGN;
         }
     }
 }

@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using rpgc.Symbols;
 
 namespace rpgc.Binding
 {
     internal sealed class BoundBinExpression : BoundExpression
     {
-        public BoundBinOperator OP;
-        public BoundExpression Left, Right;
+        public override BoundNodeToken tok => BoundNodeToken.BNT_BINEX;
+        public override TypeSymbol Type => OP.ResultType;
+        public BoundExpression Left { get; }
+        public BoundBinOperator OP { get; }
+        public BoundExpression Right { get; }
         // "type" is in BoundExpression
 
         public BoundBinExpression(BoundExpression left, BoundBinOperator op, BoundExpression right)
@@ -17,13 +21,10 @@ namespace rpgc.Binding
             OP = op;
             Left = left;
             Right = right;
-
-            type = op.ResultType;
-            tok = BoundNodeToken.BNT_UINEX;
         }
         
         // /////////////////////////////////////////////////////////////////////////////////
-        public Type resultType()
+        public TypeSymbol resultType()
         {
             return OP.ResultType;
         }

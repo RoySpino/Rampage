@@ -1,37 +1,115 @@
 ﻿using rpgc.Syntax;
+using rpgc.Text;
+using rpgc.Symbols;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace rpgc
+namespace rpgc.Syntax
 {
     internal sealed class Lexer
     {
-        string source;
+        bool doFreeLex = true;
+
+        SourceText source;
         string tmpVal;
-        int pos, linePos, lineNum, sSize, peekPos;
-        char curChar, curSpec;
+        int pos, lineNum, sSize, peekPos;
+        char curChar;
         DiagnosticBag diagnostics = new DiagnosticBag();
-        bool onEvalLine = true, doFreeLex = false;
-        List<StructNode> lineElem = null;
+        bool onEvalLine = true;
         List<SyntaxToken> strucLexLine = new List<SyntaxToken>();
+        int parenCnt = 0, linePos;
+        string lineType = "";
+        bool isFunctionLine, doDecmiation;
+        List<string> sourceLines = new List<string>();
+        bool isProcSection = false, inDBlock = false;
+        private string specChkStr;
+        List<StructCard> lineFeeder = new List<StructCard>();
+        string currentSub;
+        int symStart;
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
         int start;
         TokenKind kind;
         object Value;
 
-        public Lexer(string s)
+        public Lexer(SourceText s)
         {
             source = s;
             pos = -1;
             linePos = 0;
-            curSpec = 'H';
             lineNum = 1;
             sSize = s.Length;
+            doDecmiation = true;
 
             nextChar();
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private bool isGoodSpec(string spec, int line)
+        {
+            Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 },{ "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 },{ "DCL-PI", 3 }, { "END-PI", 3 },{ "C",4}, { "DCL-PROC", 5 },{ "END-PROC",5} };
+            Dictionary<string, int> procSpec = new Dictionary<string, int>() { { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
+            Dictionary<string, int> mainDic = null;
+            int tmpVal;
+            string curSpec;
+
+            curSpec = spec;
+
+            // standardize dictionary
+            if (isProcSection == false)
+                mainDic = specVal2;
+            else
+                mainDic = procSpec;
+
+            // invalid specification
+            if (mainDic.ContainsKey(curSpec) == false)
+            {
+                if (inDBlock == true)
+                    curSpec = "DCL-S";
+                else
+                    curSpec = "C";
+            }
+
+            // spec is the same 
+            if (curSpec == specChkStr)
+                return true;
+
+            // within the main procedure AND spec are not the same 
+            if (isProcSection == false)
+            {
+                if (mainDic[curSpec] >= mainDic[specChkStr])
+                {
+                    // start of procedure section reset to D and return true
+                    if (curSpec == "DCL-PROC")
+                    {
+                        isProcSection = true;
+                        specChkStr = "DCL-S";
+                    }
+                    else
+                        specChkStr = curSpec;
+
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                // in procedure section AND spec are not the same
+                if (mainDic[curSpec] >= mainDic[specChkStr])
+                {
+                    // end of procedure reset spec
+                    if (curSpec == "DCL-PROC")
+                        specChkStr = "DCL-S";
+                    else
+                        specChkStr = curSpec;
+
+                    return true;
+                }
+                return false;
+            }
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
@@ -45,15 +123,16 @@ namespace rpgc
             {
                 curChar = source[pos];
 
-                if (curChar == '\n')
+                if (curChar == 10)
                 {
                     pos += 1;
                     lineNum += 1;
-                    linePos = 1;
+                    linePos = 0;
                     curChar = source[pos];
                 }
 
-                linePos += 1;
+                if (curChar > 31)
+                    linePos += 1;
             }
         }
 
@@ -71,41 +150,33 @@ namespace rpgc
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
-        private void swap(ref StructNode a, ref StructNode b)
-        {
-            StructNode tmp;
-
-            tmp = a;
-            a = b;
-            b = tmp;
-        }
-
-        // ////////////////////////////////////////////////////////////////////////////////////
-        private string decToInd(string ind)
-        {
-            return "*IN" + ind;
-        }
-
-        // ////////////////////////////////////////////////////////////////////////////////////
-        private void addError(string er)
-        {
-            diagnostics.report(er, 0, 0);
-            //diagnostics.Add(new Diagnostics(new TextSpan(0,0), string.Format("rpgc: error {0}", er)));
-        }
-
-        // ////////////////////////////////////////////////////////////////////////////////////
         private TokenKind getAssignmentOrComparisonToken()
         {
             TokenKind ret;
 
+            // if the [=] is inside a parethisies then its a comparison
+            onEvalLine = (parenCnt == 0);
+
+            // if the line started with a comparison keyword then its a comparison
+            switch (lineType)
+            {
+                case "DOU":
+                case "DOW":
+                case "IF":
+                case "WHEN":
+                    onEvalLine = false;
+                    break;
+            }
+
             // check if the current line is a comparison or assignment
             if (onEvalLine == true)
+            {
+                // first = is an assignment all others are comparisons
                 ret = TokenKind.TK_ASSIGN;
+                onEvalLine = false;
+            }
             else
                 ret = TokenKind.TK_EQ;
-
-            // reset boolean
-            onEvalLine = true;
 
             return ret;
         }
@@ -152,181 +223,81 @@ namespace rpgc
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
-        private bool chkOnEvalLine(string symbol)
+        private bool chkOnBooleanLine(string symbol)
         {
-            return (symbol.Contains("EVAL") || symbol == "IF" || symbol == "FOR" ||
-                    symbol == "WHEN" || symbol == "CALLP" || symbol == "DOW" || symbol == "DOU");
+            switch (symbol)
+            {
+                case "IF":
+                case "WHEN":
+                case "DOW":
+                case "DOU":
+                case "AND":
+                case "OR":
+                case "NOT":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
         public SyntaxToken doStructLex()
         {
-            string line = "", symbol;
-            bool onElipsis = false, atEOF = false;
-            int column = 1;
-            SyntaxToken tmpTok = null;
+            string line = "", sorc, tmp;
+            int lineLength;
+            string[] arr;
+            MatchCollection mth;
+            SyntaxToken tmpTok;
+            bool Ft, Hv, Em;
+            bool getAnotherCard;
 
-            if (linePos == 1 && strucLexLine.Count == 0)
+            Ft = (doDecmiation == true);
+            Hv = (strucLexLine.Count > 0);
+            Em = (sourceLines.Count == 0);
+
+            // If block only executes when
+            // Ft: On the first time run or 
+            // Hv: the list strucLexLine has elements (Has a value) or 
+            // Em: sourceLines is not empty
+            if (Ft == true || (Hv == false && Em == false))
             {
-                while (true)
+                // do this only once 
+                // create a list of lines
+                if (doDecmiation == true)
                 {
-                    line += curChar;
-                    atEOF = (curChar == 0);
+                    doDecmiation = false;
 
-                    // skip traditinal RPG comment line and exit function
-                    if (column == 2 && curChar == '*')
-                    {
-                        while (curChar == '\n' || curChar == '\0')
-                            nextChar();
+                    sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
+                    //sorc = sorc.Substring(0, sorc.Length - 1);
+                    arr = sorc.Split('¶');
 
-                        nextChar();
-                        return new SyntaxToken(TokenKind.TK_SPACE, lineNum, (pos + 1), "");
-                    }
+                    // save array as list
+                    sourceLines = new List<string>(arr);
 
-                    // at end of line, slice string into factor componets
-                    // then exit loop
-                    if (curChar <= 10 && line.Length > 2)
-                    {
-                        line = line.ToUpper().TrimEnd();
-
-                        // remove all chars on c style comments
-                        if (line.Contains("//") == true)
-                            line = line.Remove(line.IndexOf("//"));
-
-                        // nothing entered return nothing
-                        if (line == "")
-                            return new SyntaxToken(TokenKind.TK_SPACE, lineNum, (pos + 1), "");
-
-                        // get current spec character for this line
-                        curSpec = line[0];
-
-                        // decimate line into factor strings
-                        lineElem = Decimator.doDecimation(lineNum, line);
-
-                        // reset line and column counts
-                        line = "";
-                        column = 1;
-                        break;
-                    }
-
-                    nextChar();
-                    column += 1;
+                    strucLexLine = Decimator.performCSpecVarDeclar(arr);
                 }
 
-                // bad specification found
-                if (lineElem == null)
+                
+                lineFeeder = new List<StructCard>();
+
+                for (int i = 0; i < sourceLines.Count(); i++)
                 {
-                    diagnostics.reportBadSpec(curChar, 1);
-                    return new SyntaxToken(TokenKind.TK_BADTOKEN, lineNum, 1, line);
+                    // get a line and capatilize all letters but not the strings
+                    line = SyntaxFacts.normalizeLine(sourceLines[i]);
+
+                    // remove comments and add line to list
+                    line = SyntaxFacts.normalizeComments(line);
+                    lineFeeder.Add(new StructCard(line, (i + 1)));
                 }
 
-                // get keyword symbol and check if on a evaluation line
-                if (lineElem.Count >= 5)
-                {
-                    symbol = lineElem[5].symbol;
-                    onEvalLine = (symbol.Contains("EVAL") || symbol == "IF" || symbol == "FOR" ||
-                                  symbol == "WHEN" || symbol == "CALLP" || symbol == "DOW" || symbol == "DOU");
-                }
-                else
-                    onEvalLine = false;
-
-                // -------------------------------------------------------------------------------------------------
-                // lex structured line
-                if (lineElem != null)
-                {
-                    switch (curSpec)
-                    {
-                        case 'D':
-                            strucLexLine.Add(SyntaxFacts.getIdentifierToken(lineElem[0]));
-                            break;
-                        case 'C':
-                            for (int i = 0; i < lineElem.Count; i++)
-                            {
-                                if (onEvalLine == false)
-                                {
-                                    switch (i)
-                                    {
-                                        case 0:
-                                            strucLexLine.Add(SyntaxFacts.getColum2Kyes(lineElem[0]));
-                                            break;
-                                        case 1:
-                                            strucLexLine.Add(SyntaxFacts.getColum3Kyes(lineElem[1]));
-                                            break;
-                                        case 4:
-                                            strucLexLine.AddRange(Decimator.cSpecRectifier(lineElem, ref diagnostics));
-                                            break;
-                                        case 7:
-                                            break;
-                                        case 8:
-                                            break;
-                                        case 2:
-                                        case 9:
-                                        case 10:
-                                        case 11:
-                                            strucLexLine.Add(SyntaxFacts.twoDigitIndicators(lineElem[i]));
-                                            break;
-                                            /*
-                                            case 0:
-                                                strucLexLine.Add(SyntaxFacts.getColum2Kyes(lineElem[0]));
-                                                break;
-                                            case 1:
-                                                strucLexLine.Add(SyntaxFacts.getColum3Kyes(lineElem[1]));
-                                                break;
-                                            case 3:
-                                            case 5:
-                                            case 6:
-                                                strucLexLine.AddRange(Decimator.doLex(lineElem[i], symbol));
-                                                break;
-                                            case 4:
-                                                strucLexLine.Add(SyntaxFacts.getKeywordToken(lineElem[4]));
-                                                break;
-                                            case 7:
-                                                break;
-                                            case 8:
-                                                break;
-                                            case 2:
-                                            case 9:
-                                            case 10:
-                                            case 11:
-                                                strucLexLine.Add(SyntaxFacts.twoDigitIndicators(lineElem[i]));
-                                                break;
-                                                */
-                                    }
-                                }
-                                else
-                                {
-                                    switch (i)
-                                    {
-                                        case 0:
-                                            strucLexLine.Add(SyntaxFacts.getColum2Kyes(lineElem[0]));
-                                            break;
-                                        case 1:
-                                            strucLexLine.Add(SyntaxFacts.getColum3Kyes(lineElem[1]));
-                                            break;
-                                        case 2:
-                                            strucLexLine.Add(SyntaxFacts.twoDigitIndicators(lineElem[i]));
-                                            break;
-                                        case 3:
-                                            strucLexLine.Add(SyntaxFacts.getKeywordToken(lineElem[4]));
-                                            break;
-                                        case 5:
-                                            strucLexLine.AddRange(Decimator.doLex(lineElem[5], lineElem[5].symbol));
-                                            break;
-                                    }
-                                }
-                            }
-                            break;
-                    }
-                }
+                // decimate line into factor strings
+                strucLexLine = Decimator.doDecimation3(lineFeeder, ref diagnostics);
             }
-
-            // add end of file token
-            if (atEOF == true)
-                strucLexLine.Add(new SyntaxToken(TokenKind.TK_EOI, lineNum, pos, "_"));
 
             // pop the first element from the token list and return it
             tmpTok = strucLexLine[0];
             strucLexLine.RemoveAt(0);
+
             return tmpTok;
         }
 
@@ -334,11 +305,7 @@ namespace rpgc
         // ////////////////////////////////////////////////////////////////////////////////////
         public SyntaxToken doLex()
         {
-            string symbol = "", text;
-            int intDummy;
-            string peekStr;
-            char peekChar;
-            SyntaxToken tmpTok = null;
+            string symbol = "";
 
             kind = TokenKind.TK_BADTOKEN;
             Value = null;
@@ -347,11 +314,13 @@ namespace rpgc
             if (doFreeLex == false)
                 return doStructLex();
 
+
             // -------------------------------------------------------------------------------------------------
             // check if using free format
             if (pos == 0 && curChar == '*' && peek(1) == '*')
             {
                 start = pos;
+                symStart = linePos;
                 while (char.IsWhiteSpace(curChar) == false)
                 {
                     symbol += curChar;
@@ -359,10 +328,8 @@ namespace rpgc
                 }
                 symbol = symbol.ToUpper();
                 if (symbol != "**FREE")
-                {
-                    doStructLex();
                     doFreeLex = false;
-                }
+
                 kind = TokenKind.TK_SPACE;
                 Value = "";
             }
@@ -380,6 +347,19 @@ namespace rpgc
                     symbol = "_";
                     kind = TokenKind.TK_EOI;
                     Value = "_";
+                    break;
+                case ';':
+                    start += 1;
+                    kind = TokenKind.TK_SEMI;
+                    Value = ";";
+                    onEvalLine = true;
+                    nextChar();
+                    break;
+                case ':':
+                    start += 1;
+                    kind = TokenKind.TK_COLON;
+                    Value = ":";
+                    nextChar();
                     break;
                 case '+':
                     start += 1;
@@ -407,12 +387,14 @@ namespace rpgc
                     start += 1;
                     kind = TokenKind.TK_PARENOPEN;
                     Value = "(";
+                    parenCnt += 1;
                     nextChar();
                     break;
                 case ')':
                     start += 1;
                     kind = TokenKind.TK_PARENCLOSE;
                     Value = ")";
+                    parenCnt -= 1;
                     nextChar();
                     break;
                 case '=':
@@ -455,9 +437,14 @@ namespace rpgc
                     break;
                 case ' ':
                 case '\n':
-                case '\t':
                 case '\r':
                     readWiteSpace();
+                    break;
+                case '\t':
+                    readWiteSpace();
+                    break;
+                case '\'':
+                    readString();
                     break;
                 default:
                     if (char.IsLetter(curChar) == true)
@@ -479,11 +466,55 @@ namespace rpgc
                     break;
             }
 
-            //text = SyntaxFacts.getText(kind);
-            if (symbol == null)
-                symbol = "";
+            return new SyntaxToken(kind, lineNum, start, Value, symStart);
+        }
 
-            return new SyntaxToken(kind, lineNum, start, Value);
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void readString()
+        {
+            bool isInString;
+            int charCnt;
+            string text;
+
+            // record current position and skip first single quoat
+            start = pos;
+            symStart = linePos;
+
+            nextChar();
+
+            isInString = true;
+            charCnt = 0;
+            text = "";
+
+            while (isInString)
+            {
+                charCnt += 1;
+                if (curChar == '\'' && peek(1) != '\'')
+                    break;
+
+                switch (curChar)
+                {
+                    case '\0':
+                    case '\n':
+                    case '\r':
+                        diagnostics.reportBadString(new TextSpan(start, charCnt, lineNum, pos));
+                        isInString = false;
+                        break;
+                    case '\'':
+                        text += curChar;
+                        nextChar();
+                        break;
+                    default:
+                        text += curChar;
+                        break;
+                }
+
+                nextChar();
+            }
+
+            nextChar();
+            kind = TokenKind.TK_STRING;
+            Value = text;
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
@@ -493,6 +524,7 @@ namespace rpgc
             int intDummy;
 
             start = pos;
+            symStart = linePos;
 
             while (char.IsDigit(curChar) == true)
             {
@@ -501,7 +533,7 @@ namespace rpgc
             }
 
             if (int.TryParse(symbol, out intDummy) == false)
-                diagnostics.reportInvalidNumber(symbol, typeof(int), start, symbol.Length);
+                diagnostics.reportInvalidNumber(symbol, TypeSymbol.Integer, start, symbol.Length);
 
             kind = TokenKind.TK_INTEGER;
             Value = intDummy;
@@ -515,13 +547,26 @@ namespace rpgc
             string symbol = "";
 
             start = pos;
+            symStart = linePos;
+
+            // at end of line check for end/start of a block
+            // otherwise set kind to space token
+            if (lineType.Length > 0 && (curChar == 10 || curChar == 13))
+            {
+                // get and reset linetype
+                getLineType(lineType);
+                lineType = "";
+            }
+            else
+                kind = TokenKind.TK_SPACE;
+
+            // skip whitespace
             while (char.IsWhiteSpace(curChar) == true)
             {
                 symbol += curChar;
                 nextChar();
             }
 
-            kind = TokenKind.TK_SPACE;
             Value = "";
             start += 1;
         }
@@ -532,27 +577,159 @@ namespace rpgc
             string symbol = "";
 
             start = pos;
+            symStart = linePos;
+            while (char.IsLetterOrDigit(curChar) || curChar == '#' || curChar == '@' || curChar == '$' || curChar == '_')
+            {
+                sb.Append( curChar);
+                nextChar();
+            }
+
+            symbol = sb.ToString();
+            sb.Clear();
+            symbol = symbol.ToUpper();
+
+            // check if symbol is a type
+            kind = SyntaxFacts.getRPGTypeFree(symbol);
+            if (kind != TokenKind.TK_BADTOKEN)
+                return symbol;
+
+            // get any declaration keywords
+            if ((symbol == "DCL" || symbol == "END") && peek(0) == '-')
+                symbol = getDeclaration(symbol);
+
+            // check if the symbol is a start/end of a block
+            setLineType(symbol);
+
+            // assign keyword token
+            kind = SyntaxFacts.getKeywordKind(symbol);
+
+            // check if symbol is a function name or identifier
+            if (kind == TokenKind.TK_IDENTIFIER)
+            {
+                // set subroutine name
+                subroutinesHandler(symbol);
+
+                // check built in Functions
+                if (SyntaxFacts.isValidFunction(symbol) == true)
+                {
+                    isFunctionLine = true;
+                }
+                else
+                {
+                    // chech if symbol is a valid variabel name
+                    if (SyntaxFacts.isValidVariable(symbol))
+                        Value = symbol;
+                    else
+                        kind = TokenKind.TK_BADTOKEN;
+                }
+            }
+            else
+            {
+                // RPG does not support Subroutine recursion
+                // report it as an error
+                switch (kind)
+                {
+                    case TokenKind.TK_BEGSR:
+                        subroutinesHandler();
+                        break;
+                    case TokenKind.TK_ENDSR:
+                        currentSub = "";
+                        break;
+                    case TokenKind.TK_EXSR:
+                        subroutinesHandler();
+                        break;
+                }
+
+                // this prevents [=] being treeted as assignment when only the 
+                // first is an assignment all others are comparisons
+                onEvalLine = chkOnBooleanLine(symbol);
+            }
+
+            return symbol;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private string readBuiltInFunctions()
+        {
+            string symbol = "";
+
+            start = pos;
+            symStart = linePos;
+            symbol = "%";
+
+            nextChar();
             while (char.IsLetter(curChar) == true)
             {
                 symbol += curChar;
                 nextChar();
             }
 
-            // assign keyword token
-            kind = SyntaxFacts.getKeywordKind(symbol);
-
-            // chech if symbol is a valid variabel name
-            if (kind == TokenKind.TK_BADTOKEN)
-                if (SyntaxFacts.isValidVariable(symbol))
-                {
-                    Value = symbol;
-                    kind = TokenKind.TK_IDENTIFIER;
-                    start += 1;
-                }
-
-            onEvalLine = chkOnEvalLine(symbol);
+            Value = symbol.Trim().ToUpper();
+            kind = SyntaxFacts.getBuiltInFunction(Value.ToString());
 
             return symbol;
+        }
+
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private string getDeclaration(string declar)
+        {
+            string ret;
+            char peekchar;
+            int pidx = 0;
+
+            // get declaration symbol
+            ret = declar;
+            peekchar = peek(pidx);
+            while (char.IsLetter(peekchar) || peekchar == 45)
+            {
+                ret += peekchar;
+                pidx += 1;
+                peekchar = peek(pidx);
+            }
+
+            ret = ret.ToUpper();
+
+            // check if symbol is a block/block terminator
+            switch (ret)
+            {
+                case "DCL-PROC":
+                case "BEGSR":
+                    kind = TokenKind.TK_PROCDCL;
+                    break;
+                case "DCL-PR":
+                    kind = TokenKind.TK_VARDDATAS;
+                    break;
+                case "DCL-PI":
+                    kind = TokenKind.TK_PROCINFC;
+                    break;
+                case "DCL-DS":
+                    kind = TokenKind.TK_VARDDATAS;
+                    break;
+                case "DCL-S":
+                    kind = TokenKind.TK_VARDECLR;
+                    break;
+                case "DCL-C":
+                    kind = TokenKind.TK_VARDCONST;
+                    break;
+                case "END-PROC":
+                case "ENDSR":
+                    kind = TokenKind.TK_PROCEND;
+                    break;
+                case "END-PI":
+                    kind = TokenKind.TK_ENDPI;
+                    break;
+            }
+
+            // if the symbol is not a declaration return the original symbol
+            // otherwise return the declaration symbol
+            if (kind == TokenKind.TK_IDENTIFIER)
+                return declar;
+            else
+                for (int i = 0; i < pidx; i++)
+                    nextChar();
+
+            return ret;
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
@@ -563,99 +740,133 @@ namespace rpgc
             char peekChar;
 
             start = pos;
+            symStart = linePos;
             peekPos = 0;
             symbol = "*";
             peekStr = "";
 
-            // check if the word is an indicator by checking the first 2 chars
-            nextChar();
-            peekChar = curChar;
-            while (peekChar > 32)
+            while (true)
             {
-                peekStr += peekChar;
-                peekPos += 1;
                 peekChar = peek(peekPos);
-            }
-            symbol = ("*" + peekStr);
-            Value = symbol;
-            peekStr = ("*" + peekStr.ToUpper());
+                peekPos += 1;
 
-            // a single * as passed 
-            if (symbol == "*")
+                if (SyntaxFacts.isCharLiteralOrControl(peekChar) == false  && peekChar != '*')
+                    break;
+
+                peekStr += peekChar;
+            }
+
+            peekStr = peekStr.ToUpper();
+            kind = SyntaxFacts.getBuiltInIndicator(peekStr);
+
+
+            if (kind != TokenKind.TK_BADTOKEN)
+            {
+                for (int i=0; i< peekStr.Length; i++)
+                {
+                    nextChar();
+                    start += 1;
+                }
+
+                Value = peekStr;
+                return peekStr;
+            }
+            else
             {
                 nextChar();
                 kind = TokenKind.TK_MULT;
-                return "*";
-            }
-
-            if (symbol == "**")
-            {
-                // exponental
-            }
-
-            // check if the symbol is an indicator
-            kind = SyntaxFacts.getBuiltInIndicator(peekStr);
-            if (kind != TokenKind.TK_BADTOKEN)
-            {
-                nextChar();
-                while (char.IsLetterOrDigit(curChar) == true)
-                    nextChar();
+                Value = "*";
                 start += 1;
-
-                return symbol;
-            }
-
-            // check compiler constants
-            kind = SyntaxFacts.getCompilerConstans(peekStr);
-            if (kind != TokenKind.TK_BADTOKEN)
-            {
-                nextChar();
-                while (char.IsLetterOrDigit(curChar) == true)
-                    nextChar();
-                start += 1;
-
-                return symbol;
             }
 
             kind = TokenKind.TK_MULT;
-            return "*";
+            return peekStr;
         }
-
-        // ////////////////////////////////////////////////////////////////////////////////////
-        private string readBuiltInFunctions()
-        {
-            string symbol = "";
-
-            start = pos;
-            symbol = "%";
-
-            nextChar();
-            while (char.IsLetter(curChar) == true)
-            {
-                symbol += curChar;
-                nextChar();
-            }
-
-            kind = SyntaxFacts.getBuiltInFunction(symbol.ToUpper());
-            Value = symbol;
-            start += 1;
-
-            return symbol;
-        }
-
         // ////////////////////////////////////////////////////////////////////////////////////
         private void ignoreCommentLine()
         {
             start = pos;
+            symStart = linePos;
             while (true)
             {
                 nextChar();
                 if (curChar == '\n' || curChar == '\0')
                     break;
             }
-            start += 1;
 
             kind = TokenKind.TK_SPACE;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void subroutinesHandler(string identifier = "")
+        {
+            // first pass BEGSR token received
+            if (String.IsNullOrEmpty(currentSub) == true && identifier == "")
+            {
+                currentSub = "^^";
+                return;
+            }
+
+            // second pass IDENTIFIER received this is the name of the subroutine
+            if(currentSub == "^^" && identifier != "")
+            {
+                currentSub = identifier;
+                return;
+            }
+
+            // third pass EXECSR recived
+            if (String.IsNullOrEmpty(currentSub) == false && currentSub == identifier)
+                kind = TokenKind.TK_BADTOKEN;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void getLineType(string symbol)
+        {
+            // if there is a lineType set a
+            switch (symbol)
+            {
+                //case "DCL-PROC":
+                //case "BEGSR":
+                case "DOU":
+                case "DOW":
+                case "ELSE":
+                case "FOR":
+                case "IF":
+                case "MON":
+                    kind = TokenKind.TK_BLOCKSTART;
+                    return;
+                case "ENDDO":
+                case "ENDFOR":
+                case "ENDIF":
+                case "ENDMON":
+                    kind = TokenKind.TK_BLOCKEND;
+                    return;
+            }
+
+            kind = TokenKind.TK_SPACE;
+            return;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void setLineType(string symbol)
+        {
+            if (lineType.Length == 0)
+            {
+                switch (symbol)
+                {
+                    case "BEGSR":
+                    case "DCL-PROC":
+                    case "DOU":
+                    case "DOW":
+                    case "FOR":
+                    case "IF":
+                    case "MON":
+                    case "MONITOR":
+                    case "ELSE":
+                        lineType = symbol;
+                        break;
+                }
+            }
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////

@@ -3,224 +3,112 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using rpgc.Binding;
+using rpgc.Syntax;
+using System.Collections.Immutable;
+using System.IO;
+using rpgc.Lowering;
 
 namespace rpgc
 {
     public class Complation
     {
-        public SyntaxTree Syntax;
-        DiagnosticBag diognost = new DiagnosticBag();
+        public SyntaxTree Syntax { get; }
+        private DiagnosticBag diognost = new DiagnosticBag();
+        private BoundGlobalScope _globalScope;
+        private Complation previous;
 
-        public Complation(SyntaxTree tree)
+        public Complation(SyntaxTree tree) : this(null, tree)
         {
             Syntax = tree;
-            diognost.AddRange(tree.getDiagnostics());
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        private Complation(Complation prev, SyntaxTree tree)
+        {
+            Syntax = tree;
+            previous = prev;
+            //diognost.AddRange(tree.getDiagnostics());
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        internal BoundGlobalScope globalScope_
+        {
+            get
+            {
+                BoundGlobalScope gs;
+
+                if (_globalScope == null)
+                {
+                    /*
+                    if (previous != null)
+                        gs = previous.globalScope_;
+                    else
+                        gs = null;
+                    */
+
+                    gs = Binder.bindGlobalScope(previous?.globalScope_, Syntax.ROOT);
+                    //gs = Binder.bindGlobalScope(gs, Syntax.ROOT);
+                    Interlocked.CompareExchange(ref _globalScope, gs, null);
+                }
+                return _globalScope;
+            }
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        internal void emitTree(TextWriter writer)
+        {
+            BoundStatement stmnt = getStatement();
+            _globalScope.Statement.writeTo(writer);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        private BoundBlockStatement getStatement()
+        {
+            //BoundStatement stmnt;
+            BoundBlockStatement flattend;
+
+            flattend = Lowerer.Lower(_globalScope.Statement);
+            _globalScope.Statement = flattend;
+
+            return flattend;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        public Complation continueWith(SyntaxTree tree)
+        {
+            return new Complation(this, tree);
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
         public EvaluationResult evalate(Dictionary<VariableSymbol, object> _variables)
         {
-            Binder bindr = new Binder(_variables);
-            BoundExpression boundExpr = bindr.BindExpression(Syntax.ROOT);
+            ImmutableArray<Diagnostics> diognos;
+            BoundBlockStatement st;
+            BoundProgram program;
+            Evaluator eval;
+            object value;
 
-            diognost.AddRange(bindr.diagnostics);
+            // call property {globalScope_} to bind syntax tree
+            diognos = Syntax.getDiagnostics().Concat(globalScope_.Diagnostic).ToImmutableArray();
 
-            if (diognost.Any())
-                return new EvaluationResult(diognost, null);
+            if (diognos.Any())
+                return new EvaluationResult(diognos, null);
 
-            Evaluator eval = new Evaluator(boundExpr, _variables);
-            var value = eval.Evaluate();
+            program = Binder.BindProgram(globalScope_);
 
-            return new EvaluationResult(null, value);
-        }
-    }
+            diognos = program.Diagnostics;
+            if (diognos.Any())
+                return new EvaluationResult(diognos, null);
 
-    // ////////////////////////////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     /////     /////     /////
-    // //////////////////////////////////////////////////////////////////////////////////////////////
+            st = getStatement();
+            eval = new Evaluator(program.FunctionBodies, st, _variables);
+            //eval = new Evaluator(st, _variables);
+            value = eval.Evaluate();
 
-    public sealed class Diagnostics
-    {
-        public TextSpan SPAN;
-        string MESSAGE;
-
-        public Diagnostics(TextSpan span, string message)
-        {
-            SPAN = span;
-            MESSAGE = message;
-        }
-
-        public override string ToString()
-        {
-            return MESSAGE;
-        }
-    }
-
-    // ////////////////////////////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     /////     /////     /////
-    // //////////////////////////////////////////////////////////////////////////////////////////////
-
-    public sealed class DiagnosticBag : IEnumerable<Diagnostics>
-    {
-        private List<Diagnostics> _diagnostic = new List<Diagnostics>();
-
-        public void report(TextSpan span, string message)
-        {
-            Diagnostics diag = new Diagnostics(span, message);
-            _diagnostic.Add(diag);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void report(string message, int start, int len)
-        {
-            Diagnostics diag = new Diagnostics(new TextSpan(start, len), message);
-            _diagnostic.Add(diag);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportInvalidNumber(string symbol, Type typVal, int start, int len)
-        {
-            string message;
-
-            message = string.Format("rpgc: the symbol {0} is not a valid {1}", symbol, typVal);
-
-            report(message, start, len);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportBadCharacter(char symbol, int position)
-        {
-            string message;
-
-            message = string.Format("rpgc: bad character imput", symbol);
-
-            report(message, (position - 1), 1);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportUnexpectedToken(TextSpan span, TokenKind actual, TokenKind expected)
-        {
-            string message;
-
-            message = string.Format("rpgc: unexpected token [{0}] expected [{1}]", actual, expected);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportUndefinedUniaryOp(TextSpan span, string opSym, Type opType)
-        {
-            string message;
-
-            message = string.Format("rpgc: uninary operator [{0}] is not defined for type {1}", opSym, opType);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportUndefinedBynaryOp(TextSpan span, string opSym, Type LeftType, Type RightType)
-        {
-            string message;
-
-            message = string.Format("rpgc: binnary operator [{0}] is not defined for types {1} and {2}", opSym, LeftType, RightType);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportUndefinedName(TextSpan span, string name)
-        {
-            string message;
-
-            message = string.Format("rpgc: the variable [{0}] is not defined", name);
-
-            report(span, message);
-        }
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportMissingFactor1(TextSpan span, int lp)
-        {
-            string message;
-
-            message = string.Format("rpgc: factor 1 without Key word on line {0}", lp);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportNotLeftJustified(TextSpan span, int factor, int lp)
-        {
-            string message;
-
-            message = string.Format("rpgc({1},{2}): factor {0} is not left justified", factor, lp, span.START);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportNotRightJustified(TextSpan span, int factor, int lp)
-        {
-            string message;
-
-            message = string.Format("rpgc({1},{2}): factor {0} is not right justifide", factor, lp, span.START);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportBadFactor(TextSpan span, int factor, int lp)
-        {
-            string message;
-
-            message = string.Format("rpgc({1},{2}): factor {0} is not empty", factor, lp, span.START);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportBadSpec(char symbol, int linePosition)
-        {
-            string message;
-
-            message = string.Format("rpgc({1},1): unknown specification [{0}]", symbol, linePosition);
-
-            report(new TextSpan(0, 1), message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportBadOpcode(string symbol, int linePosition)
-        {
-            string message;
-
-            message = string.Format("rpgc({1},21): unknown Operation Code [{0}]", symbol, linePosition);
-
-            report(new TextSpan(20, symbol.Length), message);
-        }
-        
-
-        // //////////////////////////////////////////////////////////////////////////
-        public IEnumerator<Diagnostics> GetEnumerator()
-        {
-            return _diagnostic.GetEnumerator();
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void AddRange(DiagnosticBag a)
-        {
-            if (a != null)
-                _diagnostic.AddRange(a._diagnostic);
-        }
-
-        public void Clear()
-        {
-            _diagnostic.Clear();
+            return new EvaluationResult(ImmutableArray<Diagnostics>.Empty, value);
         }
     }
 }

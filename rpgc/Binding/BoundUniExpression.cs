@@ -2,26 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using rpgc.Symbols;
 using System.Threading.Tasks;
 
 namespace rpgc.Binding
 {
     internal sealed class BoundUniExpression : BoundExpression
     {
-        public BoundUniOperator OP;
-        public BoundExpression right;
+        public override BoundNodeToken tok => BoundNodeToken.BNT_UINEX;
+        public override TypeSymbol Type => OP.ResultType;
+        public BoundUniOperator OP { get; }
+        public BoundExpression right { get; }
 
         public BoundUniExpression(BoundUniOperator op, BoundExpression operand)
         {
             OP = op;
             right = operand;
-
-            type = operand.type;
-            tok = BoundNodeToken.BNT_UINEX;
         }
 
         // /////////////////////////////////////////////////////////////////////////////////
-        public Type resultType()
+        public TypeSymbol resultType()
         {
             return OP.ResultType;
         }

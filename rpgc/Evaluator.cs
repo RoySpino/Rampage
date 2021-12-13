@@ -1,25 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using rpgc.Binding;
+using rpgc.Symbols;
 
 namespace rpgc
 {
-    public class Evaluator
+    internal sealed class Evaluator
     {
-        private readonly BoundExpression ROOT;
-        Dictionary<VariableSymbol, object> variables;
+        private readonly BoundBlockStatement ROOT;
+        Dictionary<VariableSymbol, object> _Globals;
+        private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
+        private object lastValue;
+        private Random randnum;
+        private readonly ImmutableDictionary<FunctionSymbol, BoundBlockStatement> FunctionBodies;
 
-        public Evaluator(BoundExpression root)
+        public Evaluator(BoundBlockStatement root, Dictionary<VariableSymbol, object> _variables)
         {
             ROOT = root;
+            _Globals = _variables;
         }
-        public Evaluator(BoundExpression root, Dictionary<VariableSymbol, object> _variables)
+
+        public Evaluator(ImmutableDictionary<FunctionSymbol, BoundBlockStatement> _functionBodies, BoundBlockStatement st, Dictionary<VariableSymbol, object> variables)
         {
-            ROOT = root;
-            variables = _variables;
+            FunctionBodies = _functionBodies;
+            ROOT = st;
+            _Globals = variables;
         }
 
         // //////////////////////////////////////////////////////////////
@@ -108,112 +117,462 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////
-        private object EvaluatExpression(BoundExpression root)
+        private object evaluateExpression(BoundExpression root)
         {
-            BoundLiteralExp bLit;
-            BoundBinExpression biTmp;
-            ParenthesizedExpression prTmp;
-            BoundUniExpression uiTmp;
-            BoundVariableExpression vtmp;
-            BoundAssignmentExpression atmp;
+            switch (root.tok)
+            {
+                case BoundNodeToken.BNT_ASNEX:
+                    return evaluateAssignmentExpression((BoundAssignmentExpression)root);
+                case BoundNodeToken.BNT_LITEX:
+                    return evaluateBoundLiteral((BoundLiteralExp)root);
+                case BoundNodeToken.BNT_UINEX:
+                    return evaluateBoundUniaryExpression((BoundUniExpression)root);
+                case BoundNodeToken.BNT_BINEX:
+                    return evaluateBoundBinaryExpression((BoundBinExpression)root);
+                case BoundNodeToken.BNT_VAREX:
+                    return evaluateVariableExpression((BoundVariableExpression)root);
+                case BoundNodeToken.BNT_CALLEXP:
+                    return evaluateCallExpression((BoundCallExpression)root);
+                case BoundNodeToken.BNT_CONVEXP:
+                    return evaluateConversionExpression((BoundConversionExpression)root);
+                case BoundNodeToken.BNT_ERROREXP:
+                    return new BoundErrorExpression();
+                default:
+                    throw new Exception(string.Format("unexpected token {0}", root.tok));
+            }
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateConversionExpression(BoundConversionExpression node)
+        {
+            var value = evaluateExpression(node._Expression);
+
+            if (node.Type == TypeSymbol.Indicator)
+                return Convert.ToBoolean(value);
+            if (node.Type == TypeSymbol.Integer)
+                return Convert.ToInt32(value);
+            if (node.Type == TypeSymbol.Char)
+                return value.ToString();
+            if (node.Type == TypeSymbol.Float)
+                return Convert.ToDouble(value);
+            if (node.Type == TypeSymbol.Date || node.Type == TypeSymbol.DateTime)
+                return Convert.ToDateTime(value.ToString());
+            if (node.Type == TypeSymbol.Time)
+                return Convert.ToDateTime($"1900-01-01 {value}");
+
+            throw new Exception($"Unexpected type {node.Type}");
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateBoundUniaryExpression(BoundUniExpression uiTmp)
+        {
             object value;
-            int L, R, operand;
+            int operand;
 
-            //handle variables
-            if (root is BoundVariableExpression)
+            var chameleonOBJ = evaluateExpression(uiTmp.right);
+
+            // convert to neg or positive
+            switch (uiTmp.OP.tok)
             {
-                vtmp = (BoundVariableExpression)root;
-                variables.TryGetValue(vtmp.Variable, out value);
-                value = variables[vtmp.Variable];
-                return value;
+                case BoundUniOpToken.BUO_IDENTITY:
+                    operand = Convert.ToInt32(chameleonOBJ);
+                    value = operand;
+                    break;
+                case BoundUniOpToken.BUO_NEGATION:
+                    operand = Convert.ToInt32(chameleonOBJ);
+                    value = (-1 * operand);
+                    break;
+                case BoundUniOpToken.BUO_NOT:
+                    value = !Convert.ToBoolean(chameleonOBJ);
+                    break;
+                default:
+                    throw new Exception(string.Format("unrecognized uinary Operator [{0}] ", uiTmp.tok));
             }
 
-            // perform or create variable for assignment
-            if (root is BoundAssignmentExpression)
+            return value;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateBoundBinaryExpression(BoundBinExpression biTmp)
+        {
+            object chameleonOBJL;
+            object chameleonOBJR;
+            object ans;
+
+            chameleonOBJL = evaluateExpression(biTmp.Left);
+            chameleonOBJR = evaluateExpression(biTmp.Right);
+
+            switch (biTmp.OP.tok)
             {
-                atmp = (BoundAssignmentExpression)root;
-                value = EvaluatExpression(atmp.Expression);
-                variables[atmp.Variable] = value;
-                return value;
+                case BoundBinOpToken.BBO_ADD:
+                    if (biTmp.Type == Symbols.TypeSymbol.Char || biTmp.Type == Symbols.TypeSymbol.varchar)
+                        ans = chameleonOBJL.ToString() + chameleonOBJR.ToString();
+                    else
+                        ans = Convert.ToInt32(chameleonOBJL) + Convert.ToInt32(chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_SUB:
+                    ans = Convert.ToInt32(chameleonOBJL) - Convert.ToInt32(chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_MULT:
+                    ans = Convert.ToInt32(chameleonOBJL) * Convert.ToInt32(chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_DIV:
+                    ans = Convert.ToInt32(chameleonOBJL) / Convert.ToInt32(chameleonOBJR);
+                    break;
+
+                case BoundBinOpToken.BBO_AND:
+                    ans = Convert.ToBoolean(chameleonOBJL) && Convert.ToBoolean(chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_OR:
+                    ans = Convert.ToBoolean(chameleonOBJL) || Convert.ToBoolean(chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_EQ:
+                    ans = Equals(chameleonOBJL, chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_NE:
+                    ans = !Equals(chameleonOBJL, chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_GE:
+                    ans = DoComparison(">=", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_GT:
+                    ans = DoComparison(">", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_LE:
+                    ans = DoComparison("<=", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    break;
+                case BoundBinOpToken.BBO_LT:
+                    ans = DoComparison("<", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    break;
+                default:
+                    throw new Exception(string.Format("unexpected Binary operator {0}", biTmp.OP.tok));
             }
 
-            // evaluate single numbers/vars
-            if (root is BoundLiteralExp)
+            return ans;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateCallExpression(BoundCallExpression node)
+        {
+            BoundBlockStatement stmnt = null;
+
+            if (node.Function == rpgc.Symbols.BuiltinFunctions.cin)
+                return Console.ReadLine();
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.cout)
             {
-                bLit = (BoundLiteralExp)root;
-                return bLit.Value;
+                string msg = evaluateExpression((node.Arguments[0])).ToString();
+                Console.WriteLine(msg);
+                return null;
             }
-
-            // handle -/+ operator assignment
-            if (root is BoundUniExpression)
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.dsply)
             {
-                uiTmp = (BoundUniExpression)root;
-                var chameleonOBJ = EvaluatExpression(uiTmp.right);
-
-                // convert to neg or positive
-                switch (uiTmp.OP.tok)
+                string msg = evaluateExpression((node.Arguments[0])).ToString();
+                Console.WriteLine(msg);
+                return null;
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Int)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                try
                 {
-                    case BoundUniOpToken.BUO_IDENTITY:
-                        operand = Convert.ToInt32(chameleonOBJ);
-                        return operand;
-                    case BoundUniOpToken.BUO_NEGATION:
-                        operand = Convert.ToInt32(chameleonOBJ);
-                        return (-1 * operand);
-                    case BoundUniOpToken.BUO_NOT:
-                        return !Convert.ToBoolean(chameleonOBJ);
-                    default:
-                        throw new Exception(string.Format("unrecognized uinary Operator [{0}] ", uiTmp.tok));
+                    return Convert.ToInt32(Val);
+                }
+                catch (Exception)
+                {
+                    throw new Exception($"Input string ‘{Val}’ was not in a correct format");
+                }
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_char)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return Val;
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Log)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return (int)Math.Log(Convert.ToDouble(Val));
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Log10)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return (int)(Math.Log(Convert.ToDouble(Val)) / Math.Log(10.0));
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_abs)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return (int)Math.Abs(Convert.ToDouble(Val));
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Sqrt)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return (int)Math.Sqrt(Convert.ToDouble(Val));
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rem)
+            {
+                string Val0 = evaluateExpression((node.Arguments[0])).ToString();
+                string Val1 = evaluateExpression((node.Arguments[1])).ToString();
+                return (int)((Convert.ToDouble(Val0) % Convert.ToDouble(Val1)));
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Len)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return Val.Length;
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Lower)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return Val.ToLower();
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Upper)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return Val.ToUpper();
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Subst)
+            {
+                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                return Val.ToUpper();
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Subst)
+            {
+                string Val0 = evaluateExpression((node.Arguments[0])).ToString();
+                string Val1 = evaluateExpression((node.Arguments[1])).ToString();
+                string Val2 = evaluateExpression((node.Arguments[2])).ToString();
+                return Val0.Substring(Convert.ToInt32(Val1), Convert.ToInt32(Val2));
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rand)
+            {
+                int max;
+                string Val0 = evaluateExpression((node.Arguments[0])).ToString();
+
+                if (randnum == null)
+                    randnum = new Random();
+
+                max = Convert.ToInt32(Val0);
+                return randnum.Next(max);
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_div)
+            {
+                int Val0 = Convert.ToInt32(evaluateExpression((node.Arguments[0])));
+                int Val1 = Convert.ToInt32(evaluateExpression((node.Arguments[1])));
+
+                return (int)(Val0 / Val1);
+            }
+            else
+            {
+                // handle programmer defigned procedures/subrutines
+                var lcals = new Dictionary<VariableSymbol, object>();
+                for (int i = 0; i < node.Arguments.Length; i++)
+                {
+                    var paramiter = node.Function.Paramiter[i];
+                    var vValue = evaluateExpression(node.Arguments[i]);
+                    lcals.Add(paramiter, vValue);
+                }
+                _locals.Push(lcals);
+
+                stmnt = FunctionBodies[node.Function];
+                var result = EvaluateStatment(stmnt);
+
+                _locals.Pop();
+                return result;
+            }
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        void performAssignment(VariableSymbol vriabl, object value)
+        {
+            Dictionary<VariableSymbol, object> lcl;
+
+            // assign value to apropreate dictionary
+            switch (vriabl.kind)
+            {
+                case SymbolKind.SYM_GLOBALVAR:
+                    _Globals[vriabl] = value;
+                    break;
+                default:
+                    lcl = _locals.Peek();
+                    lcl[vriabl] = value;
+                    break;
+            }
+        }
+
+        // //////////////////////////////////////////////////////////////
+        private void evaluateVariableDaclaration(boundVariableDeclaration node)
+        {
+            object value;
+            Dictionary<VariableSymbol, object> tmpLocalStack;
+
+            value = evaluateExpression(node.Initalizer);
+            //_Globals[node.Variable] = value;
+            lastValue = value;
+
+            performAssignment(node.Variable, value);
+            /*
+            if (node.Variable.kind == SymbolKind.SYM_GLOBALVAR)
+            {
+                _Globals[node.Variable] = value;
+            }
+            else
+            {
+                tmpLocalStack = _locals.Peek();
+                tmpLocalStack[node.Variable] = value;
+            }
+            */
+        }
+
+        // //////////////////////////////////////////////////////////////
+        private void evaluateExpressionStatement(BoundExpressionStatement stmnt)
+        {
+            lastValue = evaluateExpression(stmnt.Expression);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateVariableExpression(BoundVariableExpression vtmp)
+        {
+            object varb;
+            Dictionary<VariableSymbol, object> lcl;
+            VariableSymbol idx;
+
+            // get value from apropreate dictionary
+            switch (vtmp.Variable.kind)
+            {
+                case SymbolKind.SYM_GLOBALVAR:
+                    idx = vtmp.Variable;
+                    varb = _Globals[idx];
+                    break;
+                default:
+                    idx = vtmp.Variable;
+                    lcl = _locals.Peek();
+                    varb = lcl[idx];
+                    break;
+            }
+
+            return varb;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateAssignmentExpression(BoundAssignmentExpression atmp)
+        {
+            object value;
+            Dictionary<VariableSymbol, object> lcl;
+
+            // get value
+            value = evaluateExpression(atmp.Expression);
+
+            // assign value to apropreate dictionary
+            performAssignment(atmp.Variable, value);
+
+            /* assign value to apropreate dictionary
+            switch (atmp.Variable.kind)
+            {
+                case SymbolKind.SYM_GLOBALVAR:
+                    _Globals[atmp.Variable] = value;
+                    break;
+                default:
+                    lcl = _locals.Peek();
+                    lcl[atmp.Variable] = value;
+                    break;
+            }
+            */
+
+            return value;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        private object evaluateBoundLiteral(BoundLiteralExp bLit)
+        {
+            return bLit.Value;
+        }
+
+        // //////////////////////////////////////////////////////////////
+        private object evaluateReturnExpression(BoundReturnStatement s)
+        {
+            object returnValue;
+
+            if (s == null)
+                return null;
+
+            if (s.Expression == null)
+                returnValue = null;
+            else
+                returnValue = evaluateExpression(s.Expression);
+
+            return returnValue;
+        }
+
+        // //////////////////////////////////////////////////////////////
+        public object EvaluateStatment(BoundBlockStatement statment)
+        {
+            //Dictionary<LabelSymbol, int> lableToIndex;
+            Dictionary<string, int> lableToIndex;
+            BoundLabelStatement l;
+            BoundStatement s;
+            BoundGoToConditionalStatement cgts;
+            BoundGoToStatement gs;
+            BoundBlockStatement body;
+            int index;
+            bool cond;
+            string lblName;
+
+            body = ROOT;
+            lableToIndex = new Dictionary<string, int>();
+
+            for (int i = 0; i < statment.Statements.Length; i++)
+            {
+                if (statment.Statements[i] is BoundLabelStatement)
+                {
+                    l = (BoundLabelStatement)statment.Statements[i];
+                    lblName = l.Label.Name;
+                    lableToIndex.Add(lblName, i + 1);
                 }
             }
 
-
-            // evaluate mathmatic/Binary expressions
-            if (root is BoundBinExpression)
+            index = 0;
+            while (index < statment.Statements.Length)
             {
-                biTmp = (BoundBinExpression)root;
+                s = statment.Statements[index];
 
-                var chameleonOBJL = EvaluatExpression(biTmp.Left);
-                var chameleonOBJR = EvaluatExpression(biTmp.Right);
-
-                switch (biTmp.OP.tok)
+                switch (s.tok)
                 {
-                    case BoundBinOpToken.BBO_ADD:
-                        return Convert.ToInt32(chameleonOBJL) + Convert.ToInt32(chameleonOBJR);
-                    case BoundBinOpToken.BBO_SUB:
-                        return Convert.ToInt32(chameleonOBJL) - Convert.ToInt32(chameleonOBJR);
-                    case BoundBinOpToken.BBO_MULT:
-                        return Convert.ToInt32(chameleonOBJL) * Convert.ToInt32(chameleonOBJR);
-                    case BoundBinOpToken.BBO_DIV:
-                        return Convert.ToInt32(chameleonOBJL) / Convert.ToInt32(chameleonOBJR);
-
-                    case BoundBinOpToken.BBO_AND:
-                        return Convert.ToBoolean(chameleonOBJL) && Convert.ToBoolean(chameleonOBJR);
-                    case BoundBinOpToken.BBO_OR:
-                        return Convert.ToBoolean(chameleonOBJL) || Convert.ToBoolean(chameleonOBJR);
-                    case BoundBinOpToken.BBO_EQ:
-                        return Equals(chameleonOBJL, chameleonOBJR);
-                    case BoundBinOpToken.BBO_NE:
-                        return !Equals(chameleonOBJL, chameleonOBJR);
-                    case BoundBinOpToken.BBO_GE:
-                        return DoComparison(">=", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
-                    case BoundBinOpToken.BBO_GT:
-                        return DoComparison(">", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
-                    case BoundBinOpToken.BBO_LE:
-                        return DoComparison("<=", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
-                    case BoundBinOpToken.BBO_LT:
-                        return DoComparison("<", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    case BoundNodeToken.BNT_EXPRSTMT:
+                        evaluateExpressionStatement((BoundExpressionStatement)s);
+                        break;
+                    case BoundNodeToken.BNT_VARDECLR:
+                        evaluateVariableDaclaration((boundVariableDeclaration)s);
+                        break;
+                    case BoundNodeToken.BNT_GOTOCOND:
+                        cgts = (BoundGoToConditionalStatement)s;
+                        cond = (bool)evaluateExpression(cgts.Condition);
+                        if ((cond == true && cgts.JumpIfFalse == false) || (cond == false && cgts.JumpIfFalse == true))
+                        {
+                            lblName = cgts.Label.Name;
+                            index = lableToIndex[lblName];
+                            continue;
+                        }
+                        break;
+                    case BoundNodeToken.BNT_GOTO:
+                        gs = (BoundGoToStatement)s;
+                        lblName = gs.Label.Name;
+                        index = lableToIndex[lblName];
+                        continue;
+                    case BoundNodeToken.BNT_RETSTMT:
+                        lastValue =  evaluateReturnExpression((BoundReturnStatement)s);
+                        return lastValue;
+                    case BoundNodeToken.BNT_LABEL:
+                        break;
                     default:
-                        throw new Exception(string.Format("unexpected Binary operator {0}", biTmp.OP.tok));
+                        throw new Exception(string.Format("unexpected token {0}", s.tok));
                 }
+                index++;
             }
 
-            throw new Exception(string.Format("unexpected token {0}", root.tok));
+            return lastValue;
         }
 
         // //////////////////////////////////////////////////////////////
         public object Evaluate()
         {
-            return EvaluatExpression(ROOT);
+            return EvaluateStatment(ROOT);
         }
     }
 }

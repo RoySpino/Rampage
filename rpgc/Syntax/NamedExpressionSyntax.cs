@@ -8,17 +8,13 @@ namespace rpgc.Syntax
 {
     public class NamedExpressionSyntax : ExpresionSyntax
     {
-        public SyntaxToken IDENTIFIERTOKEN;
+        public override TokenKind kind => TokenKind.TK_NAMEDEXP;
+        public SyntaxToken IDENTIFIERTOKEN { get;}
 
         public NamedExpressionSyntax(SyntaxToken identifier)
         {
             IDENTIFIERTOKEN = identifier;
-            kind = TokenKind.TK_NAMEDEXP;
-        }
-
-        public override IEnumerable<SyntaxNode> getCildren()
-        {
-            yield return IDENTIFIERTOKEN;
+            //kind = TokenKind.TK_NAMEDEXP;
         }
     }
 }
