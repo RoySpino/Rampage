@@ -6,6 +6,7 @@ using System.IO;
 using rpgc.Syntax;
 using System.Threading.Tasks;
 using rpgc.Binding;
+using rpgc.IO;
 
 namespace rpgc
 {
@@ -34,6 +35,7 @@ namespace rpgc
                     st = SyntaxTree.parce(text);
                     _compilation = new Complation(st);
                     res = _compilation.evalate(new Dictionary<VariableSymbol, object>());
+                    TextWriterExtensions.WriteDiagnostics(Console.Out, res._Diagnostics);
                 }
             }
         }
