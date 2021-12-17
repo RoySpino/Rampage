@@ -654,5 +654,10 @@ namespace rpgc
         {
             return enumDict[kind];
         }
+
+        internal void reportBadProcedure()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

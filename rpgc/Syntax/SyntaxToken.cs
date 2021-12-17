@@ -221,6 +221,7 @@ namespace rpgc.Syntax
         TK_PRCKKEYWRD,
         TK_PROCINFC,
         TK_ENDPI,
-        TK_NEWLINE
+        TK_NEWLINE,
+        TK_ENDPR
     }
 }

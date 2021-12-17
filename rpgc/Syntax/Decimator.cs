@@ -65,22 +65,26 @@ namespace rpgc.Syntax
         static string tmpVal;
         static DiagnosticBag diagnostics = null;
         static int assignmentCnt;
-        static bool onEvalLine, onBooleanLine, isOpenProc = false;
+        static bool onEvalLine, onBooleanLine;
         static int parenCnt = 0;
         static string lineType = "", curOp="", prevOp="";
-        static string factor;
+        static string factor, DBlockType;
         static int pos, sSize, linePos;
         private static List<SyntaxToken> localTokenLst = new List<SyntaxToken>();
         private static List<SyntaxToken> localTokenLst2 = new List<SyntaxToken>();
         private static List<SyntaxToken> localCSpecDclr = new List<SyntaxToken>();
-        private static int ITagCnt = 0;
+        private static int ITagCnt = 0, PrPi_Idx=-1;
+
 
         private static bool isGoodSpec(char spec, int line)
         {
-            char prevSpec;
             Dictionary<char, int> specVal2 = new Dictionary<char, int>() { { 'H', 1 }, { 'F', 2 }, { 'D', 3 }, { 'I', 4 }, { 'C', 5 }, { 'O', 6 }, { 'P', 7 } };
             Dictionary<char, int> procSpec = new Dictionary<char, int>() { { 'D', 3 }, { 'C', 5 }, { 'P', 7 } };
-            Dictionary<char, int> mainDic = null;
+            Dictionary<char, int> mainDic;
+
+            // spec is the same as preveous
+            if (spec == specChkStr)
+                return true;
 
             // standardize dictionary
             if (isProcSection == false)
@@ -95,10 +99,6 @@ namespace rpgc.Syntax
                 return false;
             }
 
-            // spec is the same 
-            if (spec == specChkStr)
-                return true;
-
             // within the main procedure AND spec are not the same 
             if (isProcSection == false)
             {
@@ -108,7 +108,6 @@ namespace rpgc.Syntax
                     if (spec == 'P')
                     {
                         isProcSection = true;
-                        isOpenProc = true;
                         specChkStr = 'D';
                     }
                     else
@@ -123,19 +122,11 @@ namespace rpgc.Syntax
                 // in procedure section AND spec are not the same
                 if (mainDic[spec] >= mainDic[specChkStr])
                 {
-                    // start of a procedure return true and
-                    // reset spec to accept D or C specs
-                    if (spec == 'P' && isOpenProc == true)
+                    // when P is encountered reset last spec to D
+                    if (spec == 'P')
                         specChkStr = 'D';
                     else
-                    {
-                        // marking an end to a procedure 
-                        // do not reset spec but set flag to accept only another P spec
-                        if (spec == 'P' && isOpenProc == true)
-                            isOpenProc = true;
-                        else
-                            specChkStr = spec;
-                    }
+                        specChkStr = spec;
 
                     return true;
                 }
@@ -1428,7 +1419,8 @@ namespace rpgc.Syntax
                         ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
                         break;
                     case 'P':
-                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
+                        lst = decimatePSpec(lineNo, tmp);
+                        ret.AddRange(pSpecRectifier(lst));
                         break;
                     default:
                         ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
@@ -1455,6 +1447,33 @@ namespace rpgc.Syntax
             }
 
             // return lex tokens
+            return ret;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////
+        private static IEnumerable<SyntaxToken> pSpecRectifier(List<StructNode> lst)
+        {
+            List<SyntaxToken> ret = new List<SyntaxToken>();
+            string lineType;
+
+            lineType = lst[1].symbol;
+
+            switch (lineType)
+            {
+                case "B":
+                    ret.Add(new SyntaxToken(TokenKind.TK_PROCDCL, computeCharPos(lst[0].linePos), 1, "B", lst[0].chrPos));
+                    ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[1].linePos, computeCharPos(lst[1].chrPos), lst[0].symbol.Trim(), lst[1].chrPos));
+                    break;
+                case "E":
+                    ret.Add(new SyntaxToken(TokenKind.TK_ENDPROC, computeCharPos(lst[0].linePos), 1, lst[0].symbol.Trim(), lst[0].chrPos));
+                    break;
+                default:
+                    ret.Add(new SyntaxToken(TokenKind.TK_BADTOKEN, lst[1].linePos, computeCharPos(lst[1].chrPos), lst[1].symbol, lst[1].chrPos));
+                    diagnostics.reportBadProcedure();
+                    break;
+            }
+            ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[1].linePos, computeCharPos(lst[1].chrPos), "", lst[1].chrPos));
+
             return ret;
         }
 
@@ -1914,6 +1933,11 @@ namespace rpgc.Syntax
                         else
                             ret.Add(reportCSpecPositionError(snode));
                         break;
+                    case "RETURN":
+                        ret.Add(new SyntaxToken(TokenKind.TK_RETURN, lst[5].linePos, computeCharPos(lst[5].chrPos), "RETURN", lst[5].chrPos));
+                        ret.AddRange(doLex(lst[5]));
+                        ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
+                        break;
                     case "SETON":
                     case "SETOFF":
                         snode = leftJustified(lst);
@@ -2009,6 +2033,7 @@ namespace rpgc.Syntax
         {
             List<SyntaxToken> ret = new List<SyntaxToken>();
             string dclType;
+            TokenKind tk;
 
             dclType = lst[3].symbol;
 
@@ -2021,19 +2046,46 @@ namespace rpgc.Syntax
                     ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, computeCharPos(lst[0].linePos), 0, "", lst[0].chrPos));
                     break;
                 case "DS":
+                    DBlockType = "pr";
                     break;
                 case "PI":
+                    ret.Add(new SyntaxToken(TokenKind.TK_PROCINFC, computeCharPos(lst[0].linePos), 1, "Pi", lst[3].chrPos));
+                    ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[0].linePos, computeCharPos(lst[0].chrPos), "*n", lst[1].chrPos));
+                    if (lst.Count > 4)
+                        ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[6].linePos, computeCharPos(lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
+                    ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, computeCharPos(lst[0].linePos), 0, "", lst[0].chrPos));
+                    DBlockType = "pi";
                     break;
                 case "PR":
                     break;
                 case "S":
-                default:
                     ret.Add(new SyntaxToken(TokenKind.TK_VARDECLR, computeCharPos(lst[0].linePos), 1, "S", lst[3].chrPos));
                     ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[0].linePos, computeCharPos(lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
                     ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[6].linePos, computeCharPos(lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
                     ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, computeCharPos(lst[0].linePos), 0, "", lst[0].chrPos));
                     break;
+                default:
+                    // PR and PI block paramiters
+                    // remove end index and its new line
+                    if (PrPi_Idx > 0 && ret != null && ret.Count > (PrPi_Idx+1))
+                    {
+                        ret.RemoveAt(PrPi_Idx);
+                        ret.RemoveAt(PrPi_Idx+1);
+                    }
+
+                    // add paramiter
+                    ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[0].linePos, computeCharPos(lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
+                    ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[6].linePos, computeCharPos(lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
+                    ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, computeCharPos(lst[0].linePos), 0, "", lst[0].chrPos));
+
+                    // add end index and save its position
+                    tk = (DBlockType == "pi") ? TokenKind.TK_ENDPI : TokenKind.TK_ENDPR;
+                    ret.Add(new SyntaxToken(tk, computeCharPos(lst[0].linePos), 1, "", lst[0].chrPos));
+                    ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, computeCharPos(lst[0].linePos), 0, "", lst[0].chrPos));
+                    PrPi_Idx = (ret.Count - 1);
+                    break;
             }
+
 
             return ret;
         }

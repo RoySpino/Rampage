@@ -11,7 +11,7 @@ namespace rpgc.Syntax
 {
     internal sealed class Lexer
     {
-        bool doFreeLex = true;
+        bool doFreeLex = false;
 
         SourceText source;
         string tmpVal;
@@ -22,7 +22,7 @@ namespace rpgc.Syntax
         List<SyntaxToken> strucLexLine = new List<SyntaxToken>();
         int parenCnt = 0, linePos;
         string lineType = "";
-        bool isFunctionLine, doDecmiation;
+        bool doDecmiation;
         List<string> sourceLines = new List<string>();
         bool isProcSection = false, inDBlock = false;
         private string specChkStr;
@@ -310,10 +310,6 @@ namespace rpgc.Syntax
             kind = TokenKind.TK_BADTOKEN;
             Value = null;
 
-            // compile a traditinal RPG Program
-            if (doFreeLex == false)
-                return doStructLex();
-
 
             // -------------------------------------------------------------------------------------------------
             // check if using free format
@@ -326,13 +322,17 @@ namespace rpgc.Syntax
                     symbol += curChar;
                     nextChar();
                 }
-                symbol = symbol.ToUpper();
-                if (symbol != "**FREE")
-                    doFreeLex = false;
+                symbol = symbol.Trim().ToUpper();
+                if (symbol == "**FREE")
+                    doFreeLex = true;
 
                 kind = TokenKind.TK_SPACE;
                 Value = "";
             }
+
+            // compile a traditinal RPG Program
+            if (doFreeLex == false)
+                return doStructLex();
 
             // -------------------------------------------------------------------------------------------------
             // c++ style comment line
@@ -610,11 +610,7 @@ namespace rpgc.Syntax
                 subroutinesHandler(symbol);
 
                 // check built in Functions
-                if (SyntaxFacts.isValidFunction(symbol) == true)
-                {
-                    isFunctionLine = true;
-                }
-                else
+                if (SyntaxFacts.isValidFunction(symbol) == false)
                 {
                     // chech if symbol is a valid variabel name
                     if (SyntaxFacts.isValidVariable(symbol))

@@ -83,6 +83,8 @@ namespace rpgc
                     //lineIndex = Text.getLineIndex(err.SPAN.LineNo);
                     lineNumber = err.SPAN.LineNo;
                     lineIndex = lineNumber - 1;
+                    if (lineIndex < 0)
+                        continue;
                     Line = Text.Lines[lineIndex];
                     strLine = Line.ToString();
                     caracterPos = err.SPAN.START - Text.Lines[lineIndex].Start + 1;
