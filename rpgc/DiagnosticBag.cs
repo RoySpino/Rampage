@@ -619,6 +619,16 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportBadProcedure(int lineNo, int charPos)
+        {
+            string message;
+
+            message = string.Format("rpgc:({0},{1}): error: syntaxError, invalid syntax", lineNo, charPos);
+
+            report(new TextSpan(0, 0, lineNo, charPos), message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         public IEnumerator<Diagnostics> GetEnumerator()
         {
             return _diagnostic.GetEnumerator();
@@ -653,11 +663,6 @@ namespace rpgc
         private string enumHMI(TokenKind kind)
         {
             return enumDict[kind];
-        }
-
-        internal void reportBadProcedure()
-        {
-            throw new NotImplementedException();
         }
     }
 }

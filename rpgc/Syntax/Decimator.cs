@@ -1235,20 +1235,23 @@ namespace rpgc.Syntax
                 lineNo = card.LinePos;
 
                 // line is to short to use, go to next line
-                if (line.Length < 3)
+                /*
+                if (line.Length < 2)
                     continue;
+                */
 
                 // setup line
                 tmp = line.PadRight(72);
-                Specification = line[0];
+                Specification = tmp[0];
                 lineStart = charPos;
 
                 // end of file line
-                if (line[0] == '\0')
-                {
-                    ret.Add(new SyntaxToken(TokenKind.TK_EOI, lineNo, charPos, ""));
-                    continue;
-                }
+                if (line.Length > 0)
+                    if (line[0] == '\0')
+                    {
+                        ret.Add(new SyntaxToken(TokenKind.TK_EOI, lineNo, charPos, ""));
+                        break;
+                    }
 
                 // do not try to decimate a blank line
                 if (tmp[0] == ' ')
@@ -1259,10 +1262,7 @@ namespace rpgc.Syntax
 
                 // handle comments
                 if (tmp[1] == '*' || (tmp[1] == '/' && tmp[2] == '/'))
-                {
-                    ret.Add(new SyntaxToken(TokenKind.TK_SPACE, lineNo, 0, ""));
                     continue;
-                }
 
 
                 // begin decimation
@@ -1475,7 +1475,7 @@ namespace rpgc.Syntax
                     break;
                 default:
                     ret.Add(new SyntaxToken(TokenKind.TK_BADTOKEN, lst[1].linePos, computeCharPos(lst[1].chrPos), lst[1].symbol, lst[1].chrPos));
-                    diagnostics.reportBadProcedure();
+                    diagnostics.reportBadProcedure(lst[0].linePos, lst[0].chrPos);
                     break;
             }
             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[1].linePos, computeCharPos(lst[1].chrPos), "", lst[1].chrPos));

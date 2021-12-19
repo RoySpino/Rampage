@@ -634,6 +634,7 @@ namespace rpgc.Syntax
             return new ReturnStatementSyntax(keyword, retExp);
         }
 
+        // ///////////////////////////////////////////////////////////////////////
         private StatementSyntax parseConstVariableDeclaration()
         {
             SyntaxToken keyworkd, identifier, initKeyWord, varType;
