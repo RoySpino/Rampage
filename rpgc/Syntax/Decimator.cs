@@ -407,20 +407,20 @@ namespace rpgc.Syntax
             List<StructNode> nlist = new List<StructNode>();
             List<string> lstVars = new List<string>();
             SyntaxToken[] tNodeArr;
-            string decSize, intSize, varName, chkr;
+            string decSize, intSize, varName, chkr, kwrd;
             string[] declarLines;
 
 
             // find all C Spec declaration lines
             //declarLines = arr.Where(csl => csl.StartsWith("C") == true && csl.Length >= 64).ToArray();
+            // where line begins with C and line is Grater than 64 and line 58 <> [blank]
             declarLines = arr.Where(csl => csl.StartsWith("C") == true).ToArray()
                              .Where(gln => gln.Length >= 64).ToArray()
                              .Where(dln => dln[58] != ' ').ToArray();
-
+            
             // no declared lines found do nothing
             if (declarLines == null)
                 return new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(TokenKind.TK_SPACE, 0, 0, "") });
-
 
             // capatalize each line
             for (int i = 0; i < declarLines.Length; i++)
@@ -429,6 +429,12 @@ namespace rpgc.Syntax
             // normalize l
             foreach (string ln in declarLines)
             {
+                // get op-code 
+                // do not do if the opcode is an extended Fac 2
+                kwrd = ln.Substring(20, 10).Trim();
+                if (SyntaxFacts.isExtededFector2Keyword(kwrd) == true)
+                    continue;
+
                 varName = ln.Substring(44, 14).Trim();
 
                 // chekc if variable is already declared
@@ -540,7 +546,7 @@ namespace rpgc.Syntax
                         nextChar();
                         break;
                     case '*':
-                        symbol = readCompilerConstantsOrMult();// (line, ref i);
+                        symbol = readCompilerConstantsOrMult();
                         Value = symbol;
                         break;
                     case '/':
@@ -591,12 +597,12 @@ namespace rpgc.Syntax
                         symbol = readBuiltInFunctions();//readBuiltInFunctions(line, ref i);
                         break;
                     case '\'':
-                        readString();// (line, ref i);
+                        readString();
                         break;
                     case '@':
                     case '#':
                     case '$':
-                        symbol = readIdentifierOrKeyword();//(line, ref i);
+                        symbol = readIdentifierOrKeyword();
                         Value = symbol;
                         break;
                     case '0':
@@ -609,7 +615,7 @@ namespace rpgc.Syntax
                     case '7':
                     case '8':
                     case '9':
-                        symbol = readNumberToken();// (line, ref i);
+                        symbol = readNumberToken();
                         Value = symbol;
                         break;
                     case ' ':
@@ -617,20 +623,20 @@ namespace rpgc.Syntax
                     case '\n':
                     case '\t':
                     case '\r':
-                        readWiteSpace();//(line, ref i);
+                        readWiteSpace();
                         symbol = " ";
                         break;
                     default:
                         if (char.IsLetter(curChar) == true)
                         {
-                            symbol = readIdentifierOrKeyword();// (line, ref i);
+                            symbol = readIdentifierOrKeyword();
                         }
                         else
                         {
                             if (char.IsWhiteSpace(curChar) == true)
                             {
                                 symbol = "";
-                                readWiteSpace();//(line, ref i);
+                                readWiteSpace();
                             }
                             else
                             {
