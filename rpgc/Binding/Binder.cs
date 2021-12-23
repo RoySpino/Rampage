@@ -467,19 +467,17 @@ namespace rpgc.Binding
                 scope.lookupFuncion(name, out function);
             }
 
-            argsCnt = function.Paramiter.Length;
-            fnParamsCnt = syntax.Arguments.Count();
-
             // user passed an unknown function
             if (function == null)
             {
-                if (scope.lookupFuncion(name, out function) == false)
-                {
-                    diagnostics.reportBadFunctionOrProcedure(syntax.FunctionName.span, name);
+                diagnostics.reportBadFunctionOrProcedure(syntax.FunctionName.span, name);
 
-                    return new BoundErrorExpression();
-                }
+                return new BoundErrorExpression();
             }
+
+            // prep for argument count check
+            argsCnt = function.Paramiter.Length;
+            fnParamsCnt = syntax.Arguments.Count();
 
             // check for increct number of argument errors
             if (fnParamsCnt != argsCnt)
@@ -520,7 +518,9 @@ namespace rpgc.Binding
                     //diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].span, argument.Type, parametr.type);
                     //return new BoundErrorExpression();
                     if (argument.Type != TypeSymbol.ERROR)
+                    {
                         diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].span, argument.Type, parametr.type);
+                    }
                     hasErrors = true;
                 }
             }

@@ -301,6 +301,38 @@ namespace rpgc.Syntax
             return tmpTok;
         }
 
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private bool checkFree()
+        {
+            string vlu;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            char chr = '^';
+            int idx = 0;
+
+            // get the symbol
+            while (chr >= ' ')
+            {
+                chr = peek(idx);
+                sb.Append(chr);
+                idx += 1;
+            }
+
+            // convert symbol to upercase string
+            vlu = sb.ToString().ToUpper().Trim();
+
+            // check if result is the FREE simble
+            if (vlu == "**FREE")
+            {
+                // advanc character position
+                for (int i = 0; i < 6; i++)
+                    nextChar();
+                return true;
+            }
+
+            // FREE symbol was not found
+            return false;
+        }
+
 
         // ////////////////////////////////////////////////////////////////////////////////////
         public SyntaxToken doLex()
@@ -315,19 +347,8 @@ namespace rpgc.Syntax
             // check if using free format
             if (pos == 0 && curChar == '*' && peek(1) == '*')
             {
-                start = pos;
-                symStart = linePos;
-                while (char.IsWhiteSpace(curChar) == false)
-                {
-                    symbol += curChar;
-                    nextChar();
-                }
-                symbol = symbol.Trim().ToUpper();
-                if (symbol == "**FREE")
-                    doFreeLex = true;
-
-                kind = TokenKind.TK_SPACE;
-                Value = "";
+                doFreeLex = checkFree();
+                return new SyntaxToken(TokenKind.TK_SPACE, 0, 0, "", symStart);
             }
 
             // compile a traditinal RPG Program
@@ -337,7 +358,10 @@ namespace rpgc.Syntax
             // -------------------------------------------------------------------------------------------------
             // c++ style comment line
             if (curChar == '/' && peek(1) == '/')
+            {
                 ignoreCommentLine();
+                return new SyntaxToken(kind, 0, 0, "", symStart);
+            }
 
             // -------------------------------------------------------------------------------------------------
             switch (curChar)
@@ -786,7 +810,7 @@ namespace rpgc.Syntax
             while (true)
             {
                 nextChar();
-                if (curChar == '\n' || curChar == '\0')
+                if (curChar <= 20)
                     break;
             }
 

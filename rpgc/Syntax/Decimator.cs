@@ -1234,12 +1234,6 @@ namespace rpgc.Syntax
                 charPos = 0;
                 lineNo = card.LinePos;
 
-                // line is to short to use, go to next line
-                /*
-                if (line.Length < 2)
-                    continue;
-                */
-
                 // setup line
                 tmp = line.PadRight(72);
                 Specification = tmp[0];
@@ -1255,10 +1249,7 @@ namespace rpgc.Syntax
 
                 // do not try to decimate a blank line
                 if (tmp[0] == ' ')
-                {
-                    ret.Add(new SyntaxToken(TokenKind.TK_SPACE, lineNo, 0, ""));
                     continue;
-                }
 
                 // handle comments
                 if (tmp[1] == '*' || (tmp[1] == '/' && tmp[2] == '/'))
@@ -1590,7 +1581,7 @@ namespace rpgc.Syntax
                             ret.AddRange(doLex(lst[5]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                         }
-                        else;
+                        else
                         ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "CIN":
@@ -1605,7 +1596,7 @@ namespace rpgc.Syntax
                             ret.Add(new SyntaxToken(TokenKind.TK_PARENCLOSE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                         }
-                        else;
+                        else
                         ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "COUT":

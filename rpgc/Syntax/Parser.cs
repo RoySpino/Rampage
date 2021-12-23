@@ -300,7 +300,10 @@ namespace rpgc.Syntax
             // get value untill semicolon
             exp = parceExplicitCallArguments();
 
-            return new CallExpressionSyntax(identifier, new SyntaxToken(TokenKind.TK_PARENOPEN,0,0,"("), exp, new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0,")"));
+            return new CallExpressionSyntax(identifier, 
+                                            new SyntaxToken(TokenKind.TK_PARENOPEN,0,0,"("), 
+                                            exp, 
+                                            new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0,")"));
         }
 
         // ///////////////////////////////////////////////////////////////////////

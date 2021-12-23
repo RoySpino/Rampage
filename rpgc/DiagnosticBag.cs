@@ -61,6 +61,7 @@ namespace rpgc
             {TokenKind.TK_ENDFOR,"EndFor"},
             {TokenKind.TK_ENDMON,"EndMon"},
             {TokenKind.TK_ENDPROC,"EndProc"},
+            {TokenKind.TK_ENDPR, "End-Pr"},
             {TokenKind.TK_ENDSR,"EndSr"},
             {TokenKind.TK_ENDSL,"EndSl"},
             {TokenKind.TK_EOI,"EOI"},

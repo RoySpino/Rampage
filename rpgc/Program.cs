@@ -33,6 +33,9 @@ namespace rpgc
                     path = args.Single();
                     text = File.ReadAllText(path);
                     st = SyntaxTree.parce(text);
+                    
+                    //st.ROOT.writeTo(Console.Out);
+
                     _compilation = new Complation(st);
                     res = _compilation.evalate(new Dictionary<VariableSymbol, object>());
                     TextWriterExtensions.WriteDiagnostics(Console.Out, res._Diagnostics);

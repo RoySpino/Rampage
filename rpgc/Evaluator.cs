@@ -561,6 +561,7 @@ namespace rpgc
                     case BoundNodeToken.BNT_LABEL:
                         break;
                     default:
+                        s.writeTo(Console.Out);
                         throw new Exception(string.Format("unexpected token {0}", s.tok));
                 }
                 index++;
