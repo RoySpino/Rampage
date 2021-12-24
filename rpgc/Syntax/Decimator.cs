@@ -1507,6 +1507,13 @@ namespace rpgc.Syntax
                     return ret;
                 }
 
+                // one or more of the symbols are not left justified
+                if (leftJustified(lst) != null)
+                {
+                    ret.Add(reportCSpecPositionError(snode));
+                    return ret;
+                }
+
                 // add control indicators to the output
                 if (localTokenLst2.Count > 0)
                     ret.AddRange(localTokenLst2);
@@ -1518,9 +1525,6 @@ namespace rpgc.Syntax
                     case "SUB":
                     case "MULT":
                     case "DIV":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             if (lst[3].symbol == "")
                             {
                                 // +=,-=,*=,/= factor 2 to factor 3
@@ -1550,21 +1554,16 @@ namespace rpgc.Syntax
                                     ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                                 }
                             }
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
+                        break;
+                    case "BEGSR":
+                        ret.Add(new SyntaxToken(TokenKind.TK_PROCDCL, computeCharPos(lst[0].linePos), 1, "BegSr", lst[0].chrPos));
+                        ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[1].linePos, computeCharPos(lst[1].chrPos), lst[0].symbol.Trim(), lst[1].chrPos));
                         break;
                     case "MVR":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[6].linePos, computeCharPos(lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_ASSIGN, lst[4].linePos, computeCharPos(lst[4].chrPos), "=", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[4].linePos, computeCharPos(lst[4].chrPos), "^^LO", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "CALLB":
                     case "CALLP":
@@ -1572,22 +1571,15 @@ namespace rpgc.Syntax
                         break;
                     case "COMP":
                         snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.AddRange(doLex(getComparisonInd(lst[9], lst[10], lst[11])));
                             ret.Add(new SyntaxToken(TokenKind.TK_ASSIGN, lst[4].linePos, computeCharPos(lst[4].chrPos), "COMP", lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.Add(new SyntaxToken(SyntaxFacts.getindicatorOperation(lst[9].symbol, lst[10].symbol, lst[11].symbol), lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[5]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                        ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "CIN":
                         snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             //ret.AddRange(doLex(lst[6]));
                             ret.AddRange(doLex(lst[3]));
                             ret.Add(new SyntaxToken(TokenKind.TK_ASSIGN, lst[6].linePos, computeCharPos(lst[6].chrPos), "", lst[6].chrPos));
@@ -1595,30 +1587,28 @@ namespace rpgc.Syntax
                             ret.Add(new SyntaxToken(TokenKind.TK_PARENOPEN, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_PARENCLOSE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                        ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "COUT":
                     case "PRINT":
                     case "DSPLY":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_IDENTIFIER, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ITER":
                         ret.Add(new SyntaxToken(TokenKind.TK_ITER, lst[4].linePos, lst[4].chrPos, OpCode, lst[4].chrPos));
                         ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, lst[4].chrPos, "", lst[4].chrPos));
                         break;
                     case "LEAVE":
-                        ret.Add(new SyntaxToken(TokenKind.TK_LEAVE, lst[4].linePos, lst[4].chrPos, OpCode, lst[4].chrPos));
-                        ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, lst[4].chrPos, "", lst[4].chrPos));
+                            if (lst[5].symbol == "" && lst[3].symbol == "")
+                            {
+                                ret.Add(new SyntaxToken(TokenKind.TK_LEAVE, lst[4].linePos, lst[4].chrPos, OpCode, lst[4].chrPos));
+                                ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, lst[4].chrPos, "", lst[4].chrPos));
+                            }
+                            else
+                            {
+                                diagnostics.reportOpCodeNotAlone(lst[4].linePos, lst[4].chrPos, lst[4].symbol);
+                            }
                         break;
                     case "DO":
                         ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
@@ -1629,9 +1619,6 @@ namespace rpgc.Syntax
                     case "DOULT":
                     case "DOUEQ":
                     case "DOUNE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_DOU, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.AddRange(doLex(lst[4]));
@@ -1639,14 +1626,8 @@ namespace rpgc.Syntax
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "DO", lst[4].chrPos));
                             lineType = "DOU";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "DOU":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             onBooleanLine = true;
                             if (lst[3].symbol != "")
                             {
@@ -1662,9 +1643,6 @@ namespace rpgc.Syntax
                                 ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "DO", lst[4].chrPos));
                                 lineType = "DOU";
                             }
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "DOWGE":
                     case "DOWGT":
@@ -1672,9 +1650,6 @@ namespace rpgc.Syntax
                     case "DOWLT":
                     case "DOWEQ":
                     case "DOWNE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_DOW, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.AddRange(doLex(lst[4]));
@@ -1682,14 +1657,8 @@ namespace rpgc.Syntax
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "DO", lst[4].chrPos));
                             lineType = "DOW";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "DOW":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             onBooleanLine = true;
                             if (lst[3].symbol != "")
                             {
@@ -1705,14 +1674,8 @@ namespace rpgc.Syntax
                                 ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "DO", lst[4].chrPos));
                                 lineType = "DOW";
                             }
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "IF":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             onBooleanLine = true;
                             if (lst[3].symbol != "")
                             {
@@ -1728,9 +1691,6 @@ namespace rpgc.Syntax
                                 ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "IF", lst[4].chrPos));
                                 lineType = "IF";
                             }
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "IFGE":
                     case "IFGT":
@@ -1738,9 +1698,6 @@ namespace rpgc.Syntax
                     case "IFLT":
                     case "IFEQ":
                     case "IFNE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_IF, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.AddRange(doLex(lst[4]));
@@ -1748,98 +1705,47 @@ namespace rpgc.Syntax
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "IF", lst[4].chrPos));
                             lineType = "IF";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ELSE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_ELSE, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "IF", lst[4].chrPos));
                             lineType = "ELSE";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "END":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_BLOCKEND, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ENDDO":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_ENDDO, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ENDIF":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_ENDIF, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ENDFOR":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_ENDFOR, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ENDMON":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_ENDMON, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ENDSL":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_ENDSL, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ENDSR":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
-                            ret.Add(new SyntaxToken(TokenKind.TK_ENDSR, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
+                            ret.Add(new SyntaxToken(TokenKind.TK_ENDPROC, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             lineType = "";
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ORGE":
                     case "ORGT":
@@ -1847,16 +1753,10 @@ namespace rpgc.Syntax
                     case "ORLT":
                     case "OREQ":
                     case "ORNE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_OR, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.Add(getComparisonOpCode(lst[4]));
                             ret.AddRange(doLex(lst[5]));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "ANDGE":
                     case "ANDGT":
@@ -1864,22 +1764,13 @@ namespace rpgc.Syntax
                     case "ANDLT":
                     case "ANDEQ":
                     case "ANDNE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_AND, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[3]));
                             ret.Add(getComparisonOpCode(lst[4]));
                             ret.AddRange(doLex(lst[5]));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "EVAL":
                     case "EVALR":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             onEvalLine = true;
                             if (lst[3].symbol != "")
                             {
@@ -1892,14 +1783,8 @@ namespace rpgc.Syntax
                                 ret.AddRange(doLex(lst[5]));
                                 ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             }
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "FOR":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             onEvalLine = true;
                             if (lst[3].symbol != "")
                             {
@@ -1914,21 +1799,23 @@ namespace rpgc.Syntax
                                 ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                                 ret.Add(new SyntaxToken(TokenKind.TK_BLOCKSTART, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
                             }
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
+                        break;
+                    case "LEAVESR":
+                            if (lst[5].symbol == "" && lst[3].symbol == "")
+                            {
+                                ret.Add(new SyntaxToken(TokenKind.TK_RETURN, lst[5].linePos, computeCharPos(lst[5].chrPos), "RETURN", lst[5].chrPos));
+                                ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
+                            }
+                            else
+                            {
+                                diagnostics.reportOpCodeNotAlone(lst[4].linePos, lst[4].chrPos, lst[4].symbol);
+                            }
                         break;
                     case "MOVE":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.AddRange(doLex(lst[6]));
                             ret.Add(new SyntaxToken(TokenKind.TK_ASSIGN, lst[6].linePos, computeCharPos(lst[4].chrPos), "MOVE", lst[6].chrPos));
                             ret.AddRange(doLex(lst[5]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "RETURN":
                         ret.Add(new SyntaxToken(TokenKind.TK_RETURN, lst[5].linePos, computeCharPos(lst[5].chrPos), "RETURN", lst[5].chrPos));
@@ -1937,9 +1824,6 @@ namespace rpgc.Syntax
                         break;
                     case "SETON":
                     case "SETOFF":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             for (int i = 0; i < 3; i++)
                             {
                                 tmp = lst[9 + i].symbol;
@@ -1956,60 +1840,33 @@ namespace rpgc.Syntax
                                     "", lst[4].chrPos));
                             }
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, ""));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "TAG":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             tToken = new SyntaxToken(TokenKind.TK_TAG, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[3].symbol, lst[4].chrPos);
                             ret.Add(tToken);
                             ret.AddRange(doLex(lst[3]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "GOTO":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.Add(new SyntaxToken(TokenKind.TK_GOTO, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[5]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "Z-ADD":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.AddRange(doLex(lst[6]));
                             ret.Add(new SyntaxToken(TokenKind.TK_ASSIGN, lst[6].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[6].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_INTEGER, lst[4].linePos, computeCharPos(lst[4].chrPos), "0", lst[4].chrPos));
                             ret.Add(new SyntaxToken(TokenKind.TK_ADD, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[5]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                     case "Z-SUB":
-                        snode = leftJustified(lst);
-                        if (snode == null)
-                        {
                             ret.AddRange(doLex(lst[6]));
                             ret.Add(new SyntaxToken(TokenKind.TK_ASSIGN, lst[6].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[6].chrPos));
                             ret.AddRange(doLex(new StructNode(lst[4].linePos, computeCharPos(lst[4].chrPos), "0")));
                             ret.Add(new SyntaxToken(TokenKind.TK_SUB, lst[4].linePos, computeCharPos(lst[4].chrPos), OpCode, lst[4].chrPos));
                             ret.AddRange(doLex(lst[5]));
                             ret.Add(new SyntaxToken(TokenKind.TK_NEWLINE, lst[4].linePos, computeCharPos(lst[4].chrPos), "", lst[4].chrPos));
-                        }
-                        else
-                            ret.Add(reportCSpecPositionError(snode));
                         break;
                 }
             }

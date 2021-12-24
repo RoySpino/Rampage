@@ -121,8 +121,8 @@ namespace rpgc
             {TokenKind.TK_OUT,"Out"},
             {TokenKind.TK_PACKED,"Packed"},
             {TokenKind.TK_PARENEXP,"Parenthesis_Expression"},
-            {TokenKind.TK_PARENCLOSE,"Parenthesis_Close"},
-            {TokenKind.TK_PARENOPEN,"Parenthesis_Open"},
+            {TokenKind.TK_PARENCLOSE,")"},
+            {TokenKind.TK_PARENOPEN,"("},
             {TokenKind.TK_PARM,"Parm"},
             {TokenKind.TK_PLIST,"Plist"},
             {TokenKind.TK_POST,"Post"},
@@ -153,8 +153,8 @@ namespace rpgc
             {TokenKind.TK_SUB,"Sub"},
             {TokenKind.TK_SUBDUR,"SubDur"},
             {TokenKind.TK_SUBST,"SubSt"},
-            {TokenKind.TK_SUBRTNDCL,"SubRtnDcl"},
-            {TokenKind.TK_SUBRTNEND,"SubRtnEnd"},
+            {TokenKind.TK_SUBRTNDCL,"Subroutine_Dcl"},
+            {TokenKind.TK_SUBRTNEND,"Subroutine_End"},
             {TokenKind.TK_TAG,"Tag"},
             {TokenKind.TK_TEST,"Test"},
             {TokenKind.TK_TESTB,"TestB"},
@@ -181,7 +181,7 @@ namespace rpgc
             {TokenKind.TK_TYPCLAUSE,"Type_Clause"},
             {TokenKind.TK_GLBSTMNT,"Global_Statement"},
             {TokenKind.TK_PRCKKEYWRD,"Procedure_Keyword"},
-            {TokenKind.TK_PROCINFC,"Procinfc"},
+            {TokenKind.TK_PROCINFC,"Procedure_Interface"},
             {TokenKind.TK_ENDPI,"End-Pi"},
             {TokenKind.TK_NEWLINE,"NewLine"}};
 
@@ -602,6 +602,16 @@ namespace rpgc
             message = string.Format("rpgc:({0},{1}): error: The type ‘{2}’ is not recognized as an RPG type", span.LineNo, span.LinePos, sym);
 
             report(span, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportOpCodeNotAlone(int linePos, int chrPos, string symbol)
+        {
+            string message;
+
+            message = string.Format("rpgc:({0},{1}): error: The Op-Code ‘{2}’ takes no factor or gives a result", linePos, chrPos, symbol);
+
+            report(new TextSpan(0, symbol.Length, linePos, chrPos), message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
