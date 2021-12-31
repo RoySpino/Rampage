@@ -14,7 +14,7 @@ namespace rpgc.Syntax
         bool doFreeLex = false;
 
         SourceText source;
-        string tmpVal;
+        string tmpVal, tmpSpcl;
         int pos, lineNum, sSize, peekPos;
         char curChar;
         DiagnosticBag diagnostics = new DiagnosticBag();
@@ -50,7 +50,7 @@ namespace rpgc.Syntax
         // ////////////////////////////////////////////////////////////////////////////////////
         private bool isGoodSpec(string spec, int line)
         {
-            Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 },{ "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 },{ "DCL-PI", 3 }, { "END-PI", 3 },{ "C",4}, { "DCL-PROC", 5 },{ "END-PROC",5} };
+            Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> procSpec = new Dictionary<string, int>() { { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> mainDic = null;
             int tmpVal;
@@ -277,7 +277,7 @@ namespace rpgc.Syntax
                     strucLexLine = Decimator.performCSpecVarDeclar(arr);
                 }
 
-                
+
                 lineFeeder = new List<StructCard>();
 
                 for (int i = 0; i < sourceLines.Count(); i++)
@@ -604,7 +604,7 @@ namespace rpgc.Syntax
             symStart = linePos;
             while (char.IsLetterOrDigit(curChar) || curChar == '#' || curChar == '@' || curChar == '$' || curChar == '_')
             {
-                sb.Append( curChar);
+                sb.Append(curChar);
                 nextChar();
             }
 
@@ -613,12 +613,12 @@ namespace rpgc.Syntax
             symbol = symbol.ToUpper();
 
             // check if symbol is a type
-            kind = SyntaxFacts.getRPGTypeFree(symbol);
-            if (kind != TokenKind.TK_BADTOKEN)
-                return symbol;
+            //kind = SyntaxFacts.getRPGTypeFree(symbol);
+            //if (kind != TokenKind.TK_BADTOKEN)
+            //    return symbol;
 
             // get any declaration keywords
-            if ((symbol == "DCL" || symbol == "END") && peek(0) == '-')
+            if (((symbol == "DCL" || symbol == "END") && peek(0) == '-') || (symbol == "BEGSR" || symbol == "ENDSR"))
                 symbol = getDeclaration(symbol);
 
             // check if the symbol is a start/end of a block
@@ -631,7 +631,7 @@ namespace rpgc.Syntax
             if (kind == TokenKind.TK_IDENTIFIER)
             {
                 // set subroutine name
-                subroutinesHandler(symbol);
+                //subroutinesHandler(symbol);
 
                 // check built in Functions
                 if (SyntaxFacts.isValidFunction(symbol) == false)
@@ -645,21 +645,6 @@ namespace rpgc.Syntax
             }
             else
             {
-                // RPG does not support Subroutine recursion
-                // report it as an error
-                switch (kind)
-                {
-                    case TokenKind.TK_BEGSR:
-                        subroutinesHandler();
-                        break;
-                    case TokenKind.TK_ENDSR:
-                        currentSub = "";
-                        break;
-                    case TokenKind.TK_EXSR:
-                        subroutinesHandler();
-                        break;
-                }
-
                 // this prevents [=] being treeted as assignment when only the 
                 // first is an assignment all others are comparisons
                 onEvalLine = chkOnBooleanLine(symbol);
@@ -837,6 +822,19 @@ namespace rpgc.Syntax
             // third pass EXECSR recived
             if (String.IsNullOrEmpty(currentSub) == false && currentSub == identifier)
                 kind = TokenKind.TK_BADTOKEN;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void subroutinesHandler2(string identifier = "")
+        {
+            if (String.IsNullOrEmpty(currentSub) == false && currentSub == identifier)
+                kind = TokenKind.TK_BADTOKEN;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void setCurSubrutine(string curScope = "")
+        {
+            currentSub = curScope;
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////

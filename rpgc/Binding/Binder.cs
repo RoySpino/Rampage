@@ -65,7 +65,6 @@ namespace rpgc.Binding
 
 
 
-
             // load user deffigned Functions
             functionBodies = ImmutableDictionary.CreateBuilder <FunctionSymbol, BoundBlockStatement>();
 
@@ -294,7 +293,6 @@ namespace rpgc.Binding
 
             parms = ImmutableArray.CreateBuilder<ParamiterSymbol>();
             paramiterNames = new HashSet<string>();
-
             if (syntax.Paramiters != null)
             {
                 foreach (var pram in syntax.Paramiters)
@@ -314,7 +312,6 @@ namespace rpgc.Binding
 
             name = syntax.ProcedureName.sym.ToString();  //IdentfirePN.sym.ToString();
             returnType = bindTypeClause(syntax.ReturnType); //?? TypeSymbol.Void;
-
             procedur = new FunctionSymbol(name, parms.ToImmutable(), returnType, syntax, syntax.isSubroutine);
 
             if (scope.declareFunction(procedur) == false)
@@ -475,6 +472,22 @@ namespace rpgc.Binding
                 return new BoundErrorExpression();
             }
 
+            // check if user calling Procedure with EXSR
+            if (function.isSubroutine == false && syntax.isExsrCall == true)
+            {
+                diagnostics.reportProcedureCalledWithExsr(syntax.FunctionName.span, name);
+
+                return new BoundErrorExpression();
+            }
+
+            // check if user calling Subroutine like a Procedure
+            if (function.isSubroutine == true && syntax.isExsrCall == false)
+            {
+                diagnostics.reportSubroutineCalledAsProcedure(syntax.FunctionName.span, name);
+
+                return new BoundErrorExpression();
+            }
+
             // prep for argument count check
             argsCnt = function.Paramiter.Length;
             fnParamsCnt = syntax.Arguments.Count();
@@ -485,19 +498,22 @@ namespace rpgc.Binding
                 isCountGreater = (fnParamsCnt > function.Paramiter.Length);
 
                 //diagnostics.reportWrongArgumentCount(syntax.FunctionName.span, name, isCountGreater, argsCnt);
-                if (function_.Paramiter.Length > argsCnt)
+                if (function_ != null)
                 {
-                    if (fnParamsCnt > 0)
-                        firstNode = syntax.Arguments.getSeperatorAt(function_.Paramiter.Length - 1);
-                    else
-                        firstNode = syntax.Arguments[0];
+                    if (function_.Paramiter.Length > argsCnt)
+                    {
+                        if (fnParamsCnt > 0)
+                            firstNode = syntax.Arguments.getSeperatorAt(function_.Paramiter.Length - 1);
+                        else
+                            firstNode = syntax.Arguments[0];
 
-                    lastNode = syntax.Arguments[fnParamsCnt - 1];
-                    span = TextSpan.fromBounds(firstNode.span.START, lastNode.span.END);
-                }
-                else
-                {
-                    span = syntax.CloseParen.span;
+                        lastNode = syntax.Arguments[fnParamsCnt - 1];
+                        span = TextSpan.fromBounds(firstNode.span.START, lastNode.span.END);
+                    }
+                    else
+                    {
+                        span = syntax.CloseParen.span;
+                    }
                 }
                 diagnostics.reportWrongArgumentCount(syntax.FunctionName.span, name, isCountGreater, argsCnt);
 

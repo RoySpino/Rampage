@@ -503,7 +503,6 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////
         public object EvaluateStatment(BoundBlockStatement statment)
         {
-            //Dictionary<LabelSymbol, int> lableToIndex;
             Dictionary<string, int> lableToIndex;
             BoundLabelStatement l;
             BoundStatement s;

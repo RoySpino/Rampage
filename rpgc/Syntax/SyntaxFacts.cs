@@ -135,13 +135,10 @@ namespace rpgc.Syntax
                 case "DCL-DS":
                     return TokenKind.TK_VARDDATAS;
                 case "DCL-PROC":
-                    return TokenKind.TK_PROCDCL;
                 case "BEGSR":
-                    return TokenKind.TK_BEGSR;
+                    return TokenKind.TK_PROCDCL;
                 case "DCL-PI":
                     return TokenKind.TK_PROCINFC;
-                case "DCL-PR":
-                    return TokenKind.TK_BADTOKEN;
                 case "DCL-S":
                     return TokenKind.TK_VARDECLR;
                 case "DOU":
@@ -193,6 +190,8 @@ namespace rpgc.Syntax
                     return TokenKind.TK_ENDSL;
                 case "END":
                     return TokenKind.TK_BLOCKEND;
+                case "EXSR":
+                    return TokenKind.TK_EXSR;
                 case "INZ":
                     return TokenKind.TK_INZ;
                 case "FOR":
@@ -260,6 +259,35 @@ namespace rpgc.Syntax
                 case "CALLB":
                 case "IF":
                 case "RETURN":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////
+        internal static bool isStandaloneOpCode(string keywrd)
+        {
+            keywrd = keywrd.Trim();
+
+            switch (keywrd)
+            {
+                case "DUMP":
+                case "ITER":
+                case "LEAVE":
+                case "LEAVESR":
+                case "ELSE":
+                case "END":
+                case "ENDCS":
+                case "ENDDO":
+                case "ENDFOR":
+                case "ENDIF":
+                case "ENDMON":
+                case "ENDSL":
+                case "ENDSR":
+                case "SETOFF":
+                case "SETON":
+                case "MONITOR":
                     return true;
                 default:
                     return false;

@@ -10,9 +10,9 @@ using rpgc.IO;
 
 namespace rpgc
 {
-    public static class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             string path, text;
             Complation _compilation;
@@ -38,7 +38,10 @@ namespace rpgc
 
                     _compilation = new Complation(st);
                     res = _compilation.evalate(new Dictionary<VariableSymbol, object>());
-                    TextWriterExtensions.WriteDiagnostics(Console.Out, res._Diagnostics);
+
+                    // display diagnostics if any
+                    if (res._Diagnostics.Any() == true)
+                        TextWriterExtensions.WriteDiagnostics(Console.Error, res._Diagnostics);
                 }
             }
         }

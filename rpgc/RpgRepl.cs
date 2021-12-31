@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using rpgc.Text;
+using rpgc.IO;
 
 namespace rpgc
 {
@@ -77,7 +78,8 @@ namespace rpgc
             {
                 Text = stree.text;
 
-                //foreach (string x in stree.getDiagnostics())
+                Console.Out.WriteDiagnostics(bexpr._Diagnostics);
+                /*
                 foreach (Diagnostics err in bexpr._Diagnostics.OrderBy(dign => dign.SPAN.START))
                 {
                     //lineIndex = Text.getLineIndex(err.SPAN.LineNo);
@@ -100,11 +102,11 @@ namespace rpgc
                     spanPrefix = TextSpan.fromBounds(Line.Start, err.SPAN.LinePos);
                     spanError = TextSpan.fromBounds(err.SPAN.LinePos, err.SPAN.LinePos + err.SPAN.LENGTH);
 
-                    /*
-                    prefix = stree.text.ToString(spanPrefix); //ln.Substring(0, x.SPAN.START);
-                    error = stree.text.ToString(spanError);   //ln.Substring(x.SPAN.START, x.SPAN.LENGTH);
-                    sufix = stree.text.ToString(Line.Length);  //ln.Substring(x.SPAN.END);
-                    */
+                    
+                    //prefix = stree.text.ToString(spanPrefix); //ln.Substring(0, x.SPAN.START);
+                    //error = stree.text.ToString(spanError);   //ln.Substring(x.SPAN.START, x.SPAN.LENGTH);
+                    //sufix = stree.text.ToString(Line.Length);  //ln.Substring(x.SPAN.END);
+                    
 
                     tmpidx = err.SPAN.LinePos-1 + err.SPAN.LENGTH;
 
@@ -121,7 +123,7 @@ namespace rpgc
                         Console.WriteLine(sufix);
                     }
                 }
-
+                */
                 RPGDiagnostics.Clear();
             }
             else

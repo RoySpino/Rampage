@@ -465,11 +465,31 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportProcedureCalledWithExsr(TextSpan span, string name)
+        {
+            string message;
+
+            message = string.Format("rpgc:({0},{1}): error: the Procedure ‘{2}’ cannot be called using EXSR", span.LineNo, span.LinePos, name);
+
+            report(span, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         internal void reportDuplicateParamiterName(TextSpan span, string name, string type)
         {
             string message;
 
             message = string.Format("rpgc:({0},{1}): error: redefinition of paramiter ‘{2} {3}’", span.LineNo, span.LinePos, name, type);
+
+            report(span, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportSubroutineCalledAsProcedure(TextSpan span, string name)
+        {
+            string message;
+
+            message = string.Format("rpgc:({0},{1}): error: the Subroutine ‘{2}’ must be called using EXSR", span.LineNo, span.LinePos, name);
 
             report(span, message);
         }
@@ -640,6 +660,16 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportSemiColonInFixedFormat(int lineNo, int charPos)
+        {
+            string message;
+
+            message = string.Format("rpgc:({0},{1}):error: stray ‘;’ in program", lineNo, charPos);
+
+            report(new TextSpan(0, 0, lineNo, charPos), message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         public IEnumerator<Diagnostics> GetEnumerator()
         {
             return _diagnostic.GetEnumerator();
@@ -673,7 +703,10 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////////////////
         private string enumHMI(TokenKind kind)
         {
-            return enumDict[kind];
+            if (enumDict.ContainsKey(kind) == true)
+                return enumDict[kind];
+
+            return "Bad_Key";
         }
     }
 }

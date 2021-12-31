@@ -1,4 +1,5 @@
-﻿using System;
+﻿using rpgc.Syntax;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace rpgc.IO
 {
-    internal static class TextWriterExtensions
+    public static class TextWriterExtensions
     {
         public static bool isConsolOut(this TextWriter writer)
         {

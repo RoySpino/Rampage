@@ -16,6 +16,7 @@ namespace rpgc.Syntax
         SyntaxToken tok, current;
         TokenKind EndToken;
         int pos, tCount;
+        string curSubroutineScope;
         DiagnosticBag diagnostics = new DiagnosticBag();
         public readonly ImmutableArray<SyntaxToken> tokens;
         public readonly SourceText source;
@@ -85,6 +86,8 @@ namespace rpgc.Syntax
                     return parseNumberLiteral();
                 case TokenKind.TK_STRING:
                     return parseStringLiteral();
+                case TokenKind.TK_EXSR:
+                     return parseSubroutineCall();
                 case TokenKind.TK_BADTOKEN:
                     return new ErrorExpressionSyntax();
                 case TokenKind.TK_IDENTIFIER:
@@ -272,6 +275,29 @@ namespace rpgc.Syntax
         }
 
         // ///////////////////////////////////////////////////////////////////////
+        private ExpresionSyntax parseSubroutineCall()
+        {
+            // new SeperatedSyntaxList<ExpresionSyntax>(ImmutableArray.CreateBuilder<SyntaxNode>().ToImmutable());
+            SyntaxToken identifier;
+
+            // get execution symbol and parce function
+            match(TokenKind.TK_EXSR);
+            identifier = match(TokenKind.TK_IDENTIFIER);
+
+            if (identifier.sym.ToString() == curSubroutineScope)
+            {
+                diagnostics.reportSubroutineRecursion(new TextSpan(0, identifier.sym.ToString().Length, identifier.linePosition, identifier.pos));
+                return new ErrorExpressionSyntax();
+            }
+
+            return new CallExpressionSyntax(identifier,
+                                            new SyntaxToken(TokenKind.TK_PARENOPEN, 0, 0, "("),
+                                            new SeperatedSyntaxList<ExpresionSyntax>(ImmutableArray.CreateBuilder<SyntaxNode>().ToImmutable()),
+                                            new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0, ")"),
+                                            true);
+        }
+
+        // ///////////////////////////////////////////////////////////////////////
         private ExpresionSyntax parseTokenNamedOrCallExpression()
         {
             SyntaxNode a, b;
@@ -300,10 +326,10 @@ namespace rpgc.Syntax
             // get value untill semicolon
             exp = parceExplicitCallArguments();
 
-            return new CallExpressionSyntax(identifier, 
-                                            new SyntaxToken(TokenKind.TK_PARENOPEN,0,0,"("), 
-                                            exp, 
-                                            new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0,")"));
+            return new CallExpressionSyntax(identifier,
+                                            new SyntaxToken(TokenKind.TK_PARENOPEN, 0, 0, "("),
+                                            exp,
+                                            new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0, ")"));
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -329,14 +355,6 @@ namespace rpgc.Syntax
         {
             ExpresionSyntax exp;
             ImmutableArray<SyntaxNode>.Builder nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
-            ImmutableArray<SyntaxNode>.Builder nodesAndSeparators2 = ImmutableArray.CreateBuilder<SyntaxNode>();
-
-            if (peek(0).kind == TokenKind.TK_PARENOPEN)
-            {
-                match(TokenKind.TK_PARENOPEN);
-                //parceArguments();
-                match(TokenKind.TK_PARENCLOSE);
-            }
 
             if (peek(0).kind != EndToken)
             {
@@ -848,14 +866,18 @@ namespace rpgc.Syntax
             TokenKind procToken;
             bool isSub;
 
-            funcDclar = match(TokenKind.TK_PROCDCL, TokenKind.TK_BEGSR);
+            isSub = (current.sym.ToString() == "BEGSR");
+            funcDclar = match(TokenKind.TK_PROCDCL);
             identifier = match(TokenKind.TK_IDENTIFIER);
-            isSub = (funcDclar.kind == TokenKind.TK_BEGSR);
             catchEndOfLine();
-            procToken = peek(0).kind;
 
+            procToken = peek(0).kind;
+            curSubroutineScope = identifier.sym.ToString();
+
+            // check if ther are any paramiters given
             if (procToken == TokenKind.TK_PROCINFC)
             {
+                // check if the paramters are in a procedure or subroutine
                 if (isSub == false)
                 {
                     intface = match(TokenKind.TK_PROCINFC);
@@ -932,9 +954,9 @@ namespace rpgc.Syntax
             SyntaxToken closeStatementToken;
             SyntaxToken startToken;
             StatementSyntax statmt;
+            TokenKind endToken;
 
-
-            statements = ImmutableArray.CreateBuilder<StatementSyntax>();
+                statements = ImmutableArray.CreateBuilder<StatementSyntax>();
             //openStatementToken = match(TokenKind.TK_BLOCKSTART);
             openStatementToken = null;
 

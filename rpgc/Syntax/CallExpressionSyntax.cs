@@ -15,13 +15,15 @@ namespace rpgc.Syntax
         public SyntaxToken OpenParen { get; }
         public SeperatedSyntaxList<ExpresionSyntax> Arguments{get; }
         public SyntaxToken CloseParen { get; }
+        public bool isExsrCall { get; }
 
-        public CallExpressionSyntax(SyntaxToken functionName, SyntaxToken openParen, SeperatedSyntaxList<ExpresionSyntax> args, SyntaxToken closeParen)
+        public CallExpressionSyntax(SyntaxToken functionName, SyntaxToken openParen, SeperatedSyntaxList<ExpresionSyntax> args, SyntaxToken closeParen, bool onExsrCall = false)
         {
             FunctionName = functionName;
             Arguments = args;
             OpenParen = openParen;
             CloseParen = closeParen;
+            isExsrCall = onExsrCall;
         }
 
     }
