@@ -28,7 +28,7 @@ namespace rpgc.Syntax
         private string specChkStr;
         List<StructCard> lineFeeder = new List<StructCard>();
         string currentSub;
-        int symStart;
+        int symStart, prevLine;
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
         int start;
@@ -43,6 +43,8 @@ namespace rpgc.Syntax
             lineNum = 1;
             sSize = s.Length;
             doDecmiation = true;
+            prevLine = -1;
+            specChkStr = "CTL-OPT";
 
             nextChar();
         }
@@ -53,7 +55,6 @@ namespace rpgc.Syntax
             Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> procSpec = new Dictionary<string, int>() { { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> mainDic = null;
-            int tmpVal;
             string curSpec;
 
             curSpec = spec;
@@ -64,7 +65,8 @@ namespace rpgc.Syntax
             else
                 mainDic = procSpec;
 
-            // invalid specification
+            // invalid specification found
+            // assign D or C spec
             if (mainDic.ContainsKey(curSpec) == false)
             {
                 if (inDBlock == true)
@@ -110,6 +112,20 @@ namespace rpgc.Syntax
                 }
                 return false;
             }
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private bool specCheckHelper(int lineNum, string spec)
+        {
+            bool result = true;
+
+            if (lineNum != prevLine)
+            {
+                result = isGoodSpec(spec, lineNum);
+                prevLine = lineNum;
+            }
+
+            return result;
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
@@ -599,6 +615,7 @@ namespace rpgc.Syntax
         private string readIdentifierOrKeyword()
         {
             string symbol = "";
+            bool isGoodSpecResult = false;
 
             start = pos;
             symStart = linePos;
@@ -619,7 +636,19 @@ namespace rpgc.Syntax
 
             // get any declaration keywords
             if (((symbol == "DCL" || symbol == "END") && peek(0) == '-') || (symbol == "BEGSR" || symbol == "ENDSR"))
+            {
                 symbol = getDeclaration(symbol);
+
+                isGoodSpecResult = specCheckHelper(lineNum, symbol);
+            }
+            else
+            {
+                // assume code is in C spec Section
+                isGoodSpecResult = specCheckHelper(lineNum, "C");
+            }
+
+            if (isGoodSpecResult == false)
+                diagnostics.reportWrongSpecLoc(symbol, specChkStr, lineNum, linePos);
 
             // check if the symbol is a start/end of a block
             setLineType(symbol);
@@ -704,12 +733,15 @@ namespace rpgc.Syntax
                     break;
                 case "DCL-PR":
                     kind = TokenKind.TK_VARDDATAS;
+                    inDBlock = true;
                     break;
                 case "DCL-PI":
                     kind = TokenKind.TK_PROCINFC;
+                    inDBlock = true;
                     break;
                 case "DCL-DS":
                     kind = TokenKind.TK_VARDDATAS;
+                    inDBlock = true;
                     break;
                 case "DCL-S":
                     kind = TokenKind.TK_VARDECLR;
@@ -723,6 +755,15 @@ namespace rpgc.Syntax
                     break;
                 case "END-PI":
                     kind = TokenKind.TK_ENDPI;
+                    inDBlock = false;
+                    break;
+                case "END-PR":
+                    kind = TokenKind.TK_ENDPR;
+                    inDBlock = false;
+                    break;
+                case "END-DS":
+                    kind = TokenKind.TK_ENDDS;
+                    inDBlock = false;
                     break;
             }
 

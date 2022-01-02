@@ -394,6 +394,19 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        public void reportWrongSpecLoc(string symbol, string expected, int linePosition, int symStart)
+        {
+            string message;
+
+            if (expected == "C")
+                message = string.Format("rpgc:({0},{1}): error: ‘{2}’ specification found in wrong position expected KEYWORD or COMMAND", linePosition, symStart, symbol);
+            else
+                message = string.Format("rpgc:({0},{1}): error: ‘{2}’ specification found in wrong position expected ‘{3}’", linePosition, symStart, symbol, expected);
+
+            report(new TextSpan(0, 1), message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         public void reportBadOpcode(string symbol, int linePosition, int CharPos)
         {
             string message;
