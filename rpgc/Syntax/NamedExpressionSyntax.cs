@@ -11,7 +11,8 @@ namespace rpgc.Syntax
         public override TokenKind kind => TokenKind.TK_NAMEDEXP;
         public SyntaxToken IDENTIFIERTOKEN { get;}
 
-        public NamedExpressionSyntax(SyntaxToken identifier)
+        public NamedExpressionSyntax(SyntaxTree stree, SyntaxToken identifier)
+            :base (stree)
         {
             IDENTIFIERTOKEN = identifier;
             //kind = TokenKind.TK_NAMEDEXP;

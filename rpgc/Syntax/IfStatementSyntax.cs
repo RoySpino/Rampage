@@ -14,7 +14,8 @@ namespace rpgc.Syntax
         public StatementSyntax ThenStatement { get; }
         public ElseStatementSyntax ElseBlock { get; }
 
-        public IfStatementSyntax(SyntaxToken ifKeyword, ExpresionSyntax condition, StatementSyntax  thenStatement, ElseStatementSyntax elseBlock)
+        public IfStatementSyntax(SyntaxTree stree, SyntaxToken ifKeyword, ExpresionSyntax condition, StatementSyntax thenStatement, ElseStatementSyntax elseBlock)
+            : base(stree)
         {
             IfKeyword = ifKeyword;
             Condition = condition;

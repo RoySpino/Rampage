@@ -76,7 +76,7 @@ namespace rpgc
             // check for any errors
             if (bexpr._Diagnostics.Count() > 0)
             {
-                Text = stree.text;
+                Text = stree.TEXT;
 
                 Console.Out.WriteDiagnostics(bexpr._Diagnostics);
                 /*
@@ -149,7 +149,7 @@ namespace rpgc
                 return true;
                 //return false;
 
-            stree = SyntaxTree.parce(txt);
+            stree = SyntaxTree.Parse(txt);
 
             hasTwoBlankLines = txt.Split(Environment.NewLine.ToCharArray()).Reverse().TakeWhile(s => string.IsNullOrEmpty(s)).Take(2).Count() == 2;
 

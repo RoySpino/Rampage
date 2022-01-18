@@ -11,7 +11,8 @@ namespace rpgc.Syntax
         public override TokenKind kind => TokenKind.TK_EXPRNSTMNT;
         public ExpresionSyntax Expression { get; }
 
-        public ExpressionStatementSyntax(ExpresionSyntax expresion)
+        public ExpressionStatementSyntax(SyntaxTree stree, ExpresionSyntax expresion)
+            :base(stree)
         {
             Expression = expresion;
         }

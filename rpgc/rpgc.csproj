@@ -166,6 +166,7 @@
     <Compile Include="Syntax\WhileStatementSyntax.cs" />
     <Compile Include="Text\SourceText.cs" />
     <Compile Include="Text\TextLine.cs" />
+    <Compile Include="Text\TextLocation.cs" />
     <Compile Include="Text\TextSpan.cs" />
     <Compile Include="Symbols\VariableSymbol.cs" />
     <Compile Include="Text\TextSpanCompare.cs" />

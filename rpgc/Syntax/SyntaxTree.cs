@@ -4,107 +4,189 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace rpgc.Syntax
 {
     public sealed class SyntaxTree
     {
-        public CompilationUnit ROOT;
-        //ImmutableArray<Diagnostics> diagnostics;
-        DiagnosticBag diagnostics;
+        private Dictionary<SyntaxNode, SyntaxNode> _parents;
+
+        private delegate void ParseHandler(SyntaxTree syntaxTree,
+                                           out CompilationUnit root,
+                                           out ImmutableArray<Diagnostics> diagnostics);
+
+
+        public SourceText TEXT { get; }
+        public ImmutableArray<Diagnostics> Diagnostics { get; }
+        public CompilationUnit ROOT { get; }
         public SyntaxToken EOFT;
-        public SourceText text;
+        static bool includeEndOfFile_;
+        static List<SyntaxToken> tokens;
 
-        private SyntaxTree(SourceText source)
+        private SyntaxTree(SourceText text, ParseHandler handler)
         {
-            Parser parcer;
-            CompilationUnit root;
-            DiagnosticBag diagnos = null;
+            TEXT = text;
+            CompilationUnit rt;
+            ImmutableArray<Diagnostics> diag;
 
-            parcer = new Parser(source);
-            root = parcer.parseCompilationUnit();
-            diagnos = parcer.getDiagnostics();
+            handler(this, out rt, out diag);
 
-            text = source;
-            ROOT = root;
-            EOFT = root.EndOfFileToken;
-            diagnostics = diagnos;
+            Diagnostics = diag;
+            ROOT = rt;
         }
 
-        // ///////////////////////////////////////////////////////////////////////
-        public DiagnosticBag getDiagnostics()
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static SyntaxTree Load(string fileName)
         {
-            return diagnostics;
+            string text;
+            SourceText sourceText_;
+
+            text = System.IO.File.ReadAllText(fileName);
+            sourceText_ = SourceText.FROM(text, fileName);
+
+            return Parse(sourceText_);
         }
 
-        // ///////////////////////////////////////////////////////////////////////
-        // this calles the function below this one
-        public static SyntaxTree parce(string text)
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // first Parse call 
+        public static SyntaxTree Parse(string text, string fName="")
         {
-            SourceText sourceText = SourceText.from(text);
+            SourceText sourceText_;
 
-            return parce(sourceText);
-            //return new SyntaxTree(sourceText);
+            sourceText_ = SourceText.FROM(text, fName);
+
+            return Parse(sourceText_);
         }
 
-        // ///////////////////////////////////////////////////////////////////////
-        public static SyntaxTree parce(SourceText text)
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // second Parse call 
+        public static SyntaxTree Parse(SourceText text)
         {
-            return new SyntaxTree(text);
+            return new SyntaxTree(text, Parse);
         }
 
-        // ///////////////////////////////////////////////////////////////////////
-        public static IEnumerable<SyntaxToken> parceToken(string text, out ImmutableArray<Diagnostics> _diagnostics)
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Third Parse call
+        private static void Parse(SyntaxTree syntaxTree, out CompilationUnit root, out ImmutableArray<Diagnostics> diagnostics)
         {
-            SourceText txt = SourceText.from(text);
-            return parceToken(txt, out _diagnostics);
+            Parser par;
+
+            par = new Parser(syntaxTree);
+            root = par.parseCompilationUnit();
+            diagnostics = par.getDiagnostics().ToImmutableArray();
         }
 
-        // ///////////////////////////////////////////////////////////////////////
-        public static IEnumerable<SyntaxToken> parceToken(SourceText Text)
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /*
+        public static ImmutableArray<SyntaxToken> ParseTokens(string text, bool includeEndOfFile = false)
         {
-            Lexer lex = new Lexer(Text);
+            SourceText sourceText_;
+
+            sourceText_ = SourceText.FROM(text);
+            
+            return ParseTokens(sourceText_, includeEndOfFile);
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static ImmutableArray<SyntaxToken> ParseTokens(string text, out ImmutableArray<Diagnostics> diagnostics, bool includeEndOfFile = false)
+        {
+            SourceText sourceText_;
+            
+            sourceText_ = SourceText.FROM(text);
+            
+            return ParseTokens(sourceText_, out diagnostics, includeEndOfFile);
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static ImmutableArray<SyntaxToken> ParseTokens(SourceText text, bool includeEndOfFile = false)
+        {
+            return ParseTokens(text, out _, includeEndOfFile);
+        }
+        */
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static ImmutableArray<SyntaxToken> ParseTokens(SourceText text, out ImmutableArray<Diagnostics> diagnostics, bool includeEndOfFile = false)
+        {
+            SyntaxTree syntaxTree;
+
+            includeEndOfFile_ = includeEndOfFile;
+
+            syntaxTree = new SyntaxTree(text, ParseTokens);
+            diagnostics = syntaxTree.Diagnostics.ToImmutableArray();
+
+            return tokens.ToImmutableArray();
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        static void ParseTokens(SyntaxTree st, out CompilationUnit root, out ImmutableArray<Diagnostics> d)
+        {
+            List<SyntaxToken> Tokens_;
+            Lexer lex;
             SyntaxToken token;
+
+            Tokens_ = new List<SyntaxToken>();
+            lex = new Lexer(st);
 
             while (true)
             {
                 token = lex.doLex();
 
+                if (token.kind != TokenKind.TK_EOI || includeEndOfFile_)
+                    Tokens_.Add(token);
+
                 if (token.kind == TokenKind.TK_EOI)
+                {
+                    root = new CompilationUnit(st, ImmutableArray<MemberSyntax>.Empty, token);
                     break;
-
-                yield return token;
+                }
             }
+
+            d = lex.getDiagnostics().ToImmutableArray();
+            tokens = Tokens_;
         }
 
-        // ///////////////////////////////////////////////////////////////////////
-        public static ImmutableArray<SyntaxToken> parceToken(SourceText Text, out ImmutableArray<Diagnostics> diagnostics)
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        internal SyntaxNode GetParent(SyntaxNode syntaxNode)
         {
-            Lexer lex = new Lexer(Text);
-            ImmutableArray<SyntaxToken> EvaluationResult;
+            Dictionary<SyntaxNode, SyntaxNode> parents;
 
-            EvaluationResult = lexToken(Text).ToImmutableArray();
-            diagnostics = lex.getDiagnostics().ToImmutableArray();
-
-            return EvaluationResult;
-        }
-
-        // ///////////////////////////////////////////////////////////////////////
-        private static IEnumerable<SyntaxToken> lexToken(SourceText Text)
-        {
-            Lexer lex = new Lexer(Text);
-            SyntaxToken token;
-
-            while (true)
+            if (_parents == null)
             {
-                token = lex.doLex();
-
-                if (token.kind == TokenKind.TK_EOI)
-                    break;
-
-                yield return token;
+                parents = CreateParentsDictionary(ROOT);
+                Interlocked.CompareExchange(ref _parents, parents, null);
             }
+
+            return _parents[syntaxNode];
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        private Dictionary<SyntaxNode, SyntaxNode> CreateParentsDictionary(CompilationUnit root)
+        {
+            Dictionary<SyntaxNode, SyntaxNode> result;
+
+            result = new Dictionary<SyntaxNode, SyntaxNode>();
+            result.Add(root, null);
+            CreateParentsDictionary(result, root);
+
+            return result;
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        private void CreateParentsDictionary(Dictionary<SyntaxNode, SyntaxNode> result, SyntaxNode node)
+        { 
+            foreach (SyntaxNode child in node.getCildren())
+            {
+                result.Add(child, node);
+                CreateParentsDictionary(result, child);
+            }
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public ImmutableArray<Diagnostics> getDiagnostics()
+        {
+            return Diagnostics;
         }
     }
 }

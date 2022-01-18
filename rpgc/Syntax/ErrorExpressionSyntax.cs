@@ -3,7 +3,7 @@
     internal class ErrorExpressionSyntax : ExpresionSyntax
     {
         public override TokenKind kind => TokenKind.TK_BADTOKEN;
-        public ErrorExpressionSyntax()
+        public ErrorExpressionSyntax(SyntaxTree st): base(st)
         {
             //
         }

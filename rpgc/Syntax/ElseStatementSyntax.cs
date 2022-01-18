@@ -12,7 +12,8 @@ namespace rpgc.Syntax
         public SyntaxToken ElseKeyword { get; }
         public StatementSyntax ElseStatement { get; }
 
-        public ElseStatementSyntax(SyntaxToken elseKeyword, StatementSyntax elseStatement)
+        public ElseStatementSyntax(SyntaxTree stree, SyntaxToken elseKeyword, StatementSyntax elseStatement)
+            : base(stree)
         {
             ElseKeyword = elseKeyword;
             ElseStatement = elseStatement;

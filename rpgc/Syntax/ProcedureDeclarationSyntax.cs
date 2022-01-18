@@ -20,7 +20,8 @@ namespace rpgc.Syntax
         public StatementSyntax Body { get; }
         public bool isSubroutine { get; }
 
-        public ProcedureDeclarationSyntax(SyntaxToken keywrd,
+        public ProcedureDeclarationSyntax(SyntaxTree stree,
+                                          SyntaxToken keywrd,
                                           SyntaxToken identfire,
                                           SyntaxToken procInterface,
                                           SyntaxToken identfirePN,
@@ -29,16 +30,17 @@ namespace rpgc.Syntax
                                           SyntaxToken endInterfacceToken,
                                           StatementSyntax procBody,
                                           bool isSub)
+            : base(stree)
         {
 
             if (procInterface == null)
             {
                 DeclareKeyWord = keywrd;
                 ProcedureName = identfire;
-                ProcInterface = new SyntaxToken(TokenKind.TK_PROCINFC, 0, 0, "");
-                IdentfirePN = new SyntaxToken(TokenKind.TK_IDENTIFIER, 0, 0, "*n");
+                ProcInterface = new SyntaxToken(STREE, TokenKind.TK_PROCINFC, 0, 0, "");
+                IdentfirePN = new SyntaxToken(STREE, TokenKind.TK_IDENTIFIER, 0, 0, "*n");
                 Paramiters = new SeperatedParamiterList<ParamiterSyntax>(ImmutableArray.CreateBuilder<SyntaxNode>().ToImmutable());
-                EndInterfaceToken = new SyntaxToken(TokenKind.TK_ENDPI, 0, 0, "");
+                EndInterfaceToken = new SyntaxToken(STREE, TokenKind.TK_ENDPI, 0, 0, "");
                 Body = procBody;
                 isSubroutine = isSub;
             }
@@ -55,7 +57,7 @@ namespace rpgc.Syntax
             }
 
             if (retType == null || isSub == true)
-                ReturnType = new TypeClauseSyntax(new SyntaxToken(TokenKind.TK_IDENTIFIER, 0, 0, "void"));
+                ReturnType = new TypeClauseSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_IDENTIFIER, 0, 0, "void"));
             else
                 ReturnType = retType;
         }

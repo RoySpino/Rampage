@@ -15,22 +15,20 @@ namespace rpgc
 {
     public class Complation
     {
-        public SyntaxTree Syntax { get; }
+        public ImmutableArray<SyntaxTree> SyntaxTrees { get; }
         private DiagnosticBag diognost = new DiagnosticBag();
         private BoundGlobalScope _globalScope;
         private Complation previous;
 
-        public Complation(SyntaxTree tree) : this(null, tree)
+        public Complation(params SyntaxTree[] tree) : this(null, tree)
         {
-            Syntax = tree;
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
-        private Complation(Complation prev, SyntaxTree tree)
+        private Complation(Complation prev, params SyntaxTree[] trees)
         {
-            Syntax = tree;
+            SyntaxTrees = trees.ToImmutableArray();
             previous = prev;
-            //diognost.AddRange(tree.getDiagnostics());
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
@@ -49,7 +47,7 @@ namespace rpgc
                         gs = null;
                     */
 
-                    gs = Binder.bindGlobalScope(previous?.globalScope_, Syntax.ROOT);
+                    gs = Binder.bindGlobalScope(previous?.globalScope_, SyntaxTrees);
                     //gs = Binder.bindGlobalScope(gs, Syntax.ROOT);
                     Interlocked.CompareExchange(ref _globalScope, gs, null);
                 }
@@ -90,9 +88,13 @@ namespace rpgc
             BoundProgram program;
             Evaluator eval;
             object value;
+            IEnumerable<Diagnostics> parseDiagno;
+
+            // collect all diagnostics from all syntax trees
+            parseDiagno = SyntaxTrees.SelectMany(stre => stre.Diagnostics);
 
             // call property {globalScope_} to bind syntax tree
-            diognos = Syntax.getDiagnostics().Concat(globalScope_.Diagnostic).ToImmutableArray();
+            diognos = parseDiagno.Concat(globalScope_.Diagnostic).ToImmutableArray();
 
             if (diognos.Any())
                 return new EvaluationResult(diognos, null);

@@ -12,7 +12,8 @@ namespace rpgc.Syntax
         public SyntaxToken Operand { get; }
         public ExpresionSyntax right { get; }
 
-        public UinaryExpressionSyntax(SyntaxToken operand, ExpresionSyntax B)
+        public UinaryExpressionSyntax(SyntaxTree stree, SyntaxToken operand, ExpresionSyntax B)
+            : base(stree)
         {
             right = B;
             //kind = TokenKind.TK_UNIEXP;

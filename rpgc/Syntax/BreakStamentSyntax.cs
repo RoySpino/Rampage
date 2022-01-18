@@ -5,7 +5,8 @@
         public override TokenKind kind => TokenKind.TK_LEAVE;
         public SyntaxToken Keyword { get; }
 
-        public BreakStamentSyntax(SyntaxToken keywrd)
+        public BreakStamentSyntax(SyntaxTree stree, SyntaxToken keywrd)
+            : base(stree)
         {
             Keyword = keywrd;
         }

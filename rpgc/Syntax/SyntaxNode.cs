@@ -6,12 +6,19 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Collections.Immutable;
+using rpgc.Text;
 
 namespace rpgc.Syntax
 {
     public abstract class SyntaxNode
     {
         public abstract TokenKind kind { get; }
+        public SyntaxTree STREE { get; }
+
+        private protected SyntaxNode(SyntaxTree sTree)
+        {
+            STREE = sTree;
+        }
 
         // /////////////////////////////////////////////////////////////////////////
         public IEnumerable<SyntaxNode> getCildren()
@@ -120,5 +127,10 @@ namespace rpgc.Syntax
             }
         }
 
+        // /////////////////////////////////////////////////////////////////////////
+        public TextLocation Location()
+        {
+            return new TextLocation(STREE.TEXT, span);
+        }
     }
 }

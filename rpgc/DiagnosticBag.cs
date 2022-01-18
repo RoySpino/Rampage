@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using rpgc.Syntax;
 using rpgc.Symbols;
+using rpgc.Text;
 using System.Collections.Immutable;
 
 namespace rpgc
@@ -17,13 +18,13 @@ namespace rpgc
             {TokenKind.TK_ALLOC,"Alloc"},
             {TokenKind.TK_AND,"And"},
             {TokenKind.TK_ASSIGN,"Assign"},
-            {TokenKind.TK_BADTOKEN,""},
+            {TokenKind.TK_BADTOKEN,">Bad_Token<"},
             {TokenKind.TK_BEGSR,"BegSr"},
             {TokenKind.TK_BITOFF,"BitOff"},
             {TokenKind.TK_BITON,"BitOn"},
             {TokenKind.TK_BLOCKEND,"End"},
-            {TokenKind.TK_BLOCKSTART,""},
-            {TokenKind.TK_BLOCKSYNTX,""},
+            {TokenKind.TK_BLOCKSTART,">Block_Start<"},
+            {TokenKind.TK_BLOCKSYNTX,">Block_Syntax<"},
             {TokenKind.TK_BY,"By"},
             {TokenKind.TK_BYNARYEXPR,"Bynary_Expression"},
             {TokenKind.TK_CAB,"Cab"},
@@ -40,7 +41,7 @@ namespace rpgc
             {TokenKind.TK_COLON,"Colon"},
             {TokenKind.TK_COMMIT,"Commit"},
             {TokenKind.TK_COMP,"Comp"},
-            {TokenKind.TK_COMPLATIONUNT,""},
+            {TokenKind.TK_COMPLATIONUNT,">Complation_Unit<"},
             {TokenKind.TK_DATE,"Date"},
             {TokenKind.TK_DATETIME,"DatetTime"},
             {TokenKind.TK_DEALLOC,"Dealloc"},
@@ -185,261 +186,280 @@ namespace rpgc
             {TokenKind.TK_ENDPI,"End-Pi"},
             {TokenKind.TK_NEWLINE,"NewLine"}};
 
-        public void report(TextSpan span, string message)
+        public void report(TextLocation txtLoc, string message)
         {
-            Diagnostics diag = new Diagnostics(span, message);
+            Diagnostics diag = new Diagnostics(txtLoc, message);
             _diagnostic.Add(diag);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void report(string message, int start, int len)
+        public void report(TextLocation txtLoc, string message, int start, int len)
         {
-            Diagnostics diag = new Diagnostics(new TextSpan(start, len), message);
+            Diagnostics diag = new Diagnostics(txtLoc, new TextSpan(start, len), message);
             _diagnostic.Add(diag);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportInvalidNumber(string symbol, TypeSymbol typVal, int start, int len)
+        public void reportInvalidNumber(TextLocation txtLoc, string symbol, TypeSymbol typVal, int start, int len)
         {
             string message;
 
-            message = string.Format("rpgc:({2}): error: the symbol {0} is not a valid {1}", symbol, typVal, "{0},{1}");
+            message = string.Format("({2}): error: the symbol {0} is not a valid {1}", symbol, typVal, "{0},{1}");
 
-            report(message, start, len);
+            report(txtLoc, message, start, len);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportBadCharacter(char symbol, int position)
+        public void reportBadCharacter(TextLocation txtLoc, char symbol, int position)
         {
             string message;
 
-            message = string.Format("rpgc:({1}): error: bad character imput ({0})", symbol, "{0},{1}");
+            message = string.Format("({1}): error: bad character imput ({0})", symbol, "{0},{1}");
 
-            report(message, (position - 1), 1);
+            report(txtLoc, message, (position - 1), 1);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportUnexpectedToken(TextSpan span, TokenKind actual, TokenKind expected)
+        public void reportUnexpectedToken(TextLocation txtLoc, TokenKind actual, TokenKind expected)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({2},{3}): error: unexpected token ‘{0}’ expected ‘{1}’", enumHMI(actual), enumHMI(expected), span.LineNo, span.LinePos);
+            message = string.Format("({2},{3}): error: unexpected token ‘{0}’ expected ‘{1}’", enumHMI(actual), enumHMI(expected), span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportUndefinedUniaryOp(TextSpan span, string opSym, TypeSymbol opType)
+        public void reportUndefinedUniaryOp(TextLocation txtLoc, string opSym, TypeSymbol opType)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({2},{3}): error: uninary operator [{0}] is not defined for type {1}", opSym, opType, span.LineNo, span.LinePos);
+            message = string.Format("({2},{3}): error: uninary operator [{0}] is not defined for type {1}", opSym, opType, span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportUndefinedBynaryOp(TextSpan span, string opSym, TypeSymbol LeftType, TypeSymbol RightType)
+        public void reportUndefinedBynaryOp(TextLocation txtLoc, string opSym, TypeSymbol LeftType, TypeSymbol RightType)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({3},{4}): error: binnary operator [{0}] is not defined for types {1} and {2}", opSym, LeftType, RightType, span.LineNo, span.LinePos);
+            message = string.Format("({3},{4}): error: binnary operator [{0}] is not defined for types {1} and {2}", opSym, LeftType, RightType, span.LineNo, span.LinePos);
 
-            report(span, message);
-        }
-
-        internal void reportInvalidReturn(TextSpan span)
-        {
-            reportUnexpectedSymbol(span, "return");
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportUnexpectedSymbol(TextSpan span, string symbol)
+        internal void reportInvalidReturn(TextLocation txtLoc)
         {
-            string message;
-
-            message = string.Format("rpgc:({0},{1}): error: Unexpected symbol ‘{2}’ in member declaration", span.LineNo, span.LinePos, symbol);
-
-            report(span, message);
+            reportUnexpectedSymbol(txtLoc, "return");
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportFunctionReturnsNULL(TextSpan span, TypeSymbol type)
+        internal void reportUnexpectedSymbol(TextLocation txtLoc, string symbol)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: return-statement with no value, in function returning ‘{2}’", span.LineNo, span.LinePos, type);
+            message = string.Format("({0},{1}): error: Unexpected symbol ‘{2}’ in member declaration", span.LineNo, span.LinePos, symbol);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportVoidFunctionReturnsValue(TextSpan span)
+        internal void reportFunctionReturnsNULL(TextLocation txtLoc, TypeSymbol type)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: return-statement with a value, in function returning void", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: return-statement with no value, in function returning ‘{2}’", span.LineNo, span.LinePos, type);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportRedeclareParamiter(TextSpan span, string name, TypeSymbol typ)
+        internal void reportVoidFunctionReturnsValue(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: declaration of ‘{3} {2}’ shadows a parameter", span.LineNo, span.LinePos, typ, name);
+            message = string.Format("({0},{1}): error: return-statement with a value, in function returning void", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportUndefinedName(TextSpan span, string name)
+        public void reportRedeclareParamiter(TextLocation txtLoc, string name, TypeSymbol typ)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({1},{2}): error: the variable [{0}] is not defined", name, span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: declaration of ‘{3} {2}’ shadows a parameter", span.LineNo, span.LinePos, typ, name);
 
-            report(span, message);
-        }
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportMissingFactor1(TextSpan span, int ln)
-        {
-            string message;
-
-            message = string.Format("rpgc:({0},6): error: missing argument in factor 1", span.LineNo);
-
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportNotAllCodePathsReturn(TextSpan span, string procName)
+        public void reportUndefinedName(TextLocation txtLoc, string name)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: in procedure ‘{2}’: not all code paths return a value", span.LineNo, span.LinePos, procName);
+            message = string.Format("({1},{2}): error: the variable [{0}] is not defined", name, span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
+        }
+        // //////////////////////////////////////////////////////////////////////////
+        public void reportMissingFactor1(TextLocation txtLoc, int ln)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({0},6): error: missing argument in factor 1", span.LineNo);
+
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportNotLeftJustified(TextSpan span, int factorCode, int lp)
+        internal void reportNotAllCodePathsReturn(TextLocation txtLoc, string procName)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({0},{1}): error: in procedure ‘{2}’: not all code paths return a value", span.LineNo, span.LinePos, procName);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        public void reportNotLeftJustified(TextLocation txtLoc, int factorCode, int lp)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
             Dictionary<int, string> factors = new Dictionary<int, string> { { 1, "Factor 1" }, { 2, "Factor 2" }, { 3, "Result" }, { 4, "Op-Code" } };
 
-            message = string.Format("rpgc:({1},{2}): error: {0} is not left justified", factors[factorCode], span.LineNo, lp);
+            message = string.Format("({1},{2}): error: {0} is not left justified", factors[factorCode], span.LineNo, lp);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportNotRightJustified(TextSpan span, int factor, int lp)
+        public void reportNotRightJustified(TextLocation txtLoc, int factor, int lp)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({1},{2}): error: factor {0} is not right justifide", factor, lp, span.LinePos);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportVariableAlreadyDeclared(TextLocation txtLoc, string name)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({1},{2}): error: redeclaration of ‘{0}’", name, span.LineNo, span.LinePos);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportVariableDoesNotExist(TextLocation txtLoc, string name)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({1},{2}): error: ‘{0}’ was not declared in this scope", name, span.LineNo, span.LinePos);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        public void reportBadFactor(TextLocation txtLoc, int factor, int lp)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({1},{2}): error: factor {0} is not empty", factor, lp, span.START);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        public void reportBadSpec(TextLocation txtLoc, char symbol, int linePosition)
         {
             string message;
 
-            message = string.Format("rpgc:({1},{2}): error: factor {0} is not right justifide", factor, lp, span.LinePos);
+            message = string.Format("({1},1): error: unknown specification ‘{0}’", symbol, linePosition);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportVariableAlreadyDeclared(TextSpan span, string name)
+        public void reportWrongSpecLoc(TextLocation txtLoc, char symbol, char expected, int linePosition)
         {
             string message;
 
-            message = string.Format("rpgc:({1},{2}): error: redeclaration of ‘{0}’", name, span.LineNo, span.LinePos);
+            message = string.Format("({0},1): error: ‘{1}’ specification found in wrong position expected ‘{2}’", linePosition, symbol, expected);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportVariableDoesNotExist(TextSpan span, string name)
-        {
-            string message;
-
-            message = string.Format("rpgc:({1},{2}): error: ‘{0}’ was not declared in this scope", name, span.LineNo, span.LinePos);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportBadFactor(TextSpan span, int factor, int lp)
-        {
-            string message;
-
-            message = string.Format("rpgc:({1},{2}): error: factor {0} is not empty", factor, lp, span.START);
-
-            report(span, message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportBadSpec(char symbol, int linePosition)
-        {
-            string message;
-
-            message = string.Format("rpgc:({1},1): error: unknown specification ‘{0}’", symbol, linePosition);
-
-            report(new TextSpan(0, 1), message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportWrongSpecLoc(char symbol, char expected, int linePosition)
-        {
-            string message;
-
-            message = string.Format("rpgc:({0},1): error: ‘{1}’ specification found in wrong position expected ‘{2}’", linePosition, symbol, expected);
-
-            report(new TextSpan(0, 1), message);
-        }
-
-        // //////////////////////////////////////////////////////////////////////////
-        public void reportWrongSpecLoc(string symbol, string expected, int linePosition, int symStart)
+        public void reportWrongSpecLoc(TextLocation txtLoc, string symbol, string expected, int linePosition, int symStart)
         {
             string message;
 
             if (expected == "C")
-                message = string.Format("rpgc:({0},{1}): error: ‘{2}’ specification found in wrong position expected KEYWORD or COMMAND", linePosition, symStart, symbol);
+                message = string.Format("({0},{1}): error: ‘{2}’ specification found in wrong position expected KEYWORD or COMMAND", linePosition, symStart, symbol);
             else
-                message = string.Format("rpgc:({0},{1}): error: ‘{2}’ specification found in wrong position expected ‘{3}’", linePosition, symStart, symbol, expected);
+                message = string.Format("({0},{1}): error: ‘{2}’ specification found in wrong position expected ‘{3}’", linePosition, symStart, symbol, expected);
 
-            report(new TextSpan(0, 1), message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        public void reportBadOpcode(string symbol, int linePosition, int CharPos)
+        public void reportBadOpcode(TextLocation txtLoc, string symbol, int linePosition, int CharPos)
         {
             string message;
 
-            message = string.Format("rpgc:({1},21): error: unknown Operation Code [{0}]", symbol, linePosition);
+            message = string.Format("({1},21): error: unknown Operation Code [{0}]", symbol, linePosition);
 
-            report(new TextSpan(CharPos, symbol.Length), message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportExpressionMustHaveValue(TextSpan span)
+        internal void reportExpressionMustHaveValue(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: value can not be null", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: value can not be null", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportAssignmentOfConstantVar(TextSpan span, string name)
+        internal void reportAssignmentOfConstantVar(TextLocation txtLoc, string name)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({1},{2}): error: assignment of read-only variable ‘{0}’", name, span.LineNo, span.LinePos);
+            message = string.Format("({1},{2}): error: assignment of read-only variable ‘{0}’", name, span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportWrongArgumentCount(TextSpan span, string FunctionName, bool isGreaterThan, int argCnt)
+        internal void reportWrongArgumentCount(TextLocation txtLoc, string FunctionName, bool isGreaterThan, int argCnt)
         {
             string message, qual, argumentCount;
+            TextSpan span = txtLoc.SPAN;
 
             if (isGreaterThan == true)
                 qual = "many";
@@ -451,235 +471,256 @@ namespace rpgc
             else
                 argumentCount = argCnt.ToString();
 
-            message = string.Format("rpgc:({0},{1}): error: too {3} arguments to function ‘{2}’ expected {4}", 
+            message = string.Format("({0},{1}): error: too {3} arguments to function ‘{2}’ expected {4}", 
                                     span.LineNo, span.LinePos, FunctionName, qual, argumentCount);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportAssignmentWithotResult(TextSpan span)
+        internal void reportAssignmentWithotResult(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: Assignment or Move without result", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: Assignment or Move without result", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportSubroutineRecursion(TextSpan span)
+        internal void reportSubroutineRecursion(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: Subroutines cannot used for recursions", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: Subroutines cannot used for recursions", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportProcedureCalledWithExsr(TextSpan span, string name)
+        internal void reportProcedureCalledWithExsr(TextLocation txtLoc, string name)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: the Procedure ‘{2}’ cannot be called using EXSR", span.LineNo, span.LinePos, name);
+            message = string.Format("({0},{1}): error: the Procedure ‘{2}’ cannot be called using EXSR", span.LineNo, span.LinePos, name);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportDuplicateParamiterName(TextSpan span, string name, string type)
+        internal void reportDuplicateParamiterName(TextLocation txtLoc, string name, string type)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: redefinition of paramiter ‘{2} {3}’", span.LineNo, span.LinePos, name, type);
+            message = string.Format("({0},{1}): error: redefinition of paramiter ‘{2} {3}’", span.LineNo, span.LinePos, name, type);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportSubroutineCalledAsProcedure(TextSpan span, string name)
+        internal void reportSubroutineCalledAsProcedure(TextLocation txtLoc, string name)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: the Subroutine ‘{2}’ must be called using EXSR", span.LineNo, span.LinePos, name);
+            message = string.Format("({0},{1}): error: the Subroutine ‘{2}’ must be called using EXSR", span.LineNo, span.LinePos, name);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportCannotConvert(TextSpan span, TypeSymbol givenType, TypeSymbol expectedResult)
+        internal void reportCannotConvert(TextLocation txtLoc, TypeSymbol givenType, TypeSymbol expectedResult)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({2},{3}): error: cannot convert from ‘{0}’ to ‘{1}’", givenType.Name, expectedResult.Name, span.LineNo, span.LinePos);
+            message = string.Format("({2},{3}): error: cannot convert from ‘{0}’ to ‘{1}’", givenType.Name, expectedResult.Name, span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportFunctionAlreadyDeclared(TextSpan span, string name)
+        internal void reportFunctionAlreadyDeclared(TextLocation txtLoc, string name)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: redefinition of ‘{2}’", span.LineNo, span.LinePos, name);
+            message = string.Format("({0},{1}): error: redefinition of ‘{2}’", span.LineNo, span.LinePos, name);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportCannotConvertType(TextSpan span, TypeSymbol GivenType, TypeSymbol ExpectedType)
+        internal void reportCannotConvertType(TextLocation txtLoc, TypeSymbol GivenType, TypeSymbol ExpectedType)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: invalid conversion from ‘{2}’ to ‘{3}’", span.LineNo, span.LinePos, GivenType, ExpectedType);
+            message = string.Format("({0},{1}): error: invalid conversion from ‘{2}’ to ‘{3}’", span.LineNo, span.LinePos, GivenType, ExpectedType);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportFunctionParamiterTypeMismatch(TextSpan span, TypeSymbol type1, TypeSymbol type2)
+        internal void reportFunctionParamiterTypeMismatch(TextLocation txtLoc, TypeSymbol type1, TypeSymbol type2)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: invalid conversion from ‘{2}’ to ‘{3}’", span.LineNo, span.LinePos, type1, type2);
+            message = string.Format("({0},{1}): error: invalid conversion from ‘{2}’ to ‘{3}’", span.LineNo, span.LinePos, type1, type2);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportBadString(TextSpan span)
+        internal void reportBadString(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: missing terminating ' character in string constant", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: missing terminating ' character in string constant", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportLoopWithoutCondition(TextSpan span, string LoopSym)
+        internal void reportLoopWithoutCondition(TextLocation txtLoc, string LoopSym)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: missing conditional statement for {2}", span.LineNo, span.LinePos, LoopSym);
+            message = string.Format("({0},{1}): error: missing conditional statement for {2}", span.LineNo, span.LinePos, LoopSym);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportSubroutineParamiters(TextSpan span)
+        internal void reportSubroutineParamiters(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): Subroutines do not accept paramiters", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): Subroutines do not accept paramiters", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportIfWithoutCondition(TextSpan span)
+        internal void reportIfWithoutCondition(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: missing conditional expression for [If]", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: missing conditional expression for [If]", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportVariableWithNoName(TextSpan span)
+        internal void reportVariableWithNoName(TextLocation txtLoc)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): declaration does not declare anything", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): declaration does not declare anything", span.LineNo, span.LinePos);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportBadFunctionOrProcedure(TextSpan span, string name)
+        internal void reportBadFunctionOrProcedure(TextLocation txtLoc, string name)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: ‘{2}’ was not declared in this scope", span.LineNo, span.LinePos, name);
+            message = string.Format("({0},{1}): error: ‘{2}’ was not declared in this scope", span.LineNo, span.LinePos, name);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportMissingTag(TextSpan span, string tagName)
+        internal void reportMissingTag(TextLocation txtLoc, string tagName)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: No such lable: ‘{2}’ within the scope of the goto statement", span.LineNo, span.LinePos, tagName);
+            message = string.Format("({0},{1}): error: No such lable: ‘{2}’ within the scope of the goto statement", span.LineNo, span.LinePos, tagName);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportTypeNotGiven(TextSpan span)
+        internal void reportTypeNotGiven(TextLocation txtLoc)
         {
             string message;
-            
-            message = string.Format("rpgc:({0},{1}): error: Variable declaration without a type", span.LineNo, span.LinePos);
+            TextSpan span = txtLoc.SPAN;
 
-            report(span, message);
+            message = string.Format("({0},{1}): error: Variable declaration without a type", span.LineNo, span.LinePos);
+
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportUndefinedType(TextSpan span, string sym)
+        internal void reportUndefinedType(TextLocation txtLoc, string sym)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: The type ‘{2}’ is not recognized as an RPG type", span.LineNo, span.LinePos, sym);
+            message = string.Format("({0},{1}): error: The type ‘{2}’ is not recognized as an RPG type", span.LineNo, span.LinePos, sym);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportOpCodeNotAlone(int linePos, int chrPos, string symbol)
+        internal void reportOpCodeNotAlone(TextLocation txtLoc, int linePos, int chrPos, string symbol)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: The Op-Code ‘{2}’ takes no factor or gives a result", linePos, chrPos, symbol);
+            message = string.Format("({0},{1}): error: The Op-Code ‘{2}’ takes no factor or gives a result", linePos, chrPos, symbol);
 
-            report(new TextSpan(0, symbol.Length, linePos, chrPos), message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportLeaveOrIterWithoutLoop(TextSpan span, string v)
+        internal void reportLeaveOrIterWithoutLoop(TextLocation txtLoc, string v)
         {
             string message, sym;
+            TextSpan span = txtLoc.SPAN;
 
             if (v == "break")
                 sym = "Leave";
             else
                 sym = "Iter";
 
-            message = string.Format("rpgc:({0},{1}): error: {2} statement not within loop", span.LineNo, span.LinePos, sym);
+            message = string.Format("({0},{1}): error: {2} statement not within loop", span.LineNo, span.LinePos, sym);
 
-            report(span, message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportBadProcedure(int lineNo, int charPos)
+        internal void reportBadProcedure(TextLocation txtLoc, int lineNo, int charPos)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("rpgc:({0},{1}): error: syntaxError, invalid syntax", lineNo, charPos);
+            message = string.Format("({0},{1}): error: syntaxError, invalid syntax", lineNo, charPos);
 
-            report(new TextSpan(0, 0, lineNo, charPos), message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal void reportSemiColonInFixedFormat(int lineNo, int charPos)
+        internal void reportSemiColonInFixedFormat(TextLocation txtLoc, int lineNo, int charPos)
         {
             string message;
 
-            message = string.Format("rpgc:({0},{1}):error: stray ‘;’ in program", lineNo, charPos);
+            message = string.Format("({0},{1}):error: stray ‘;’ in program", lineNo, charPos);
 
-            report(new TextSpan(0, 0, lineNo, charPos), message);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////

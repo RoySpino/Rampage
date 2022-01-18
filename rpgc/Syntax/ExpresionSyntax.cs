@@ -8,5 +8,8 @@ namespace rpgc.Syntax
 {
     public abstract class ExpresionSyntax : SyntaxNode
     {
+        public ExpresionSyntax(SyntaxTree stree)
+            :base(stree)
+        { }
     }
 }

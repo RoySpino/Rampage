@@ -13,7 +13,8 @@ namespace rpgc.Syntax
         public ExpresionSyntax Condition { get; }
         public StatementSyntax Body { get; }
 
-        public UntilStatementSyntax(SyntaxToken keyword, ExpresionSyntax condition, StatementSyntax body)
+        public UntilStatementSyntax(SyntaxTree stree, SyntaxToken keyword, ExpresionSyntax condition, StatementSyntax body)
+            : base(stree)
         {
             Keyword = keyword;
             Condition = condition;

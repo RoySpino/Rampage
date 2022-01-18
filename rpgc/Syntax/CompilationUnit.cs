@@ -15,7 +15,8 @@ namespace rpgc.Syntax
         public override TokenKind kind => TokenKind.TK_COMPLATIONUNT;
 
         //public CompilationUnit(StatementSyntax satement, SyntaxToken eofToken)
-        public CompilationUnit(ImmutableArray<MemberSyntax> memberSatement, SyntaxToken eofToken)
+        public CompilationUnit(SyntaxTree stree,ImmutableArray<MemberSyntax> memberSatement, SyntaxToken eofToken)
+            :base (stree)
         {
             Members = memberSatement;
             EndOfFileToken = eofToken;

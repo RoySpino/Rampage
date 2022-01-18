@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Immutable;
 using rpgc.Syntax;
 using rpgc.Symbols;
+using rpgc.Text;
 
 namespace rpgc.Binding
 {
@@ -14,7 +15,6 @@ namespace rpgc.Binding
         private FunctionSymbol function_;
         private int loopControlLableCnt = 0;
         public Stack<(BoundLabel BreakLable, BoundLabel ContinueLable)> _loopStack = new Stack<(BoundLabel BreakLable, BoundLabel ContinueLable)>();
-        private List<string> subTracker = new List<string>();
 
         public Binder(BoundScope parant)
         {
@@ -37,7 +37,8 @@ namespace rpgc.Binding
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
-        public static BoundGlobalScope bindGlobalScope(BoundGlobalScope prev, CompilationUnit syntax)
+        //public static BoundGlobalScope bindGlobalScope(BoundGlobalScope prev, CompilationUnit syntax)
+        public static BoundGlobalScope bindGlobalScope(BoundGlobalScope prev, ImmutableArray<SyntaxTree> sTrees)
         {
             Binder _binder;
             BoundScope parantScop;
@@ -48,19 +49,25 @@ namespace rpgc.Binding
             ImmutableArray<VariableSymbol> vars;
             ImmutableArray<Diagnostics> tDiagonostics;
             DiagnosticBag diag;
-            BoundScope parantScope;
             BoundBlockStatement loweredBody;
             BoundStatement body;
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies;
+            IEnumerable<ProcedureDeclarationSyntax> functionDeclar;
+            IEnumerable<GlobalStatmentSyntax> gblStatements;
+
+            //BoundScope parantScope;
 
             parantScop = createParantScope(prev);
             _binder = new Binder(parantScop, funcn: null);
             diag = new DiagnosticBag();
 
 
+            // get all procedures and subrutines from all source codes
+            functionDeclar = sTrees.SelectMany(st => st.ROOT.Members).OfType<ProcedureDeclarationSyntax>();
+
             // load all built in functions first
             // doing this alows procedures to be called globaly like C# or java
-            foreach (var procedure in syntax.Members.OfType<ProcedureDeclarationSyntax>())
+            foreach (ProcedureDeclarationSyntax procedure in functionDeclar)
                 _binder.bindFunctionDeclaration(procedure);
 
 
@@ -70,7 +77,7 @@ namespace rpgc.Binding
 
             if (prev != null)
             {
-                foreach (var _function in prev.Functons)
+                foreach (FunctionSymbol _function in prev.Functons)
                 {
                     _binder = new Binder(parantScop, _function);
                     body = _binder.BindStatements(_function.Declaration.Body);
@@ -81,12 +88,14 @@ namespace rpgc.Binding
                 }
             }
 
+            // get all global statements from all source codes
+            gblStatements = sTrees.SelectMany(st => st.ROOT.Members).OfType<GlobalStatmentSyntax>();
 
 
             // load main scope
             statementBuilder = ImmutableArray.CreateBuilder<BoundStatement>();
 
-            foreach (GlobalStatmentSyntax gblStmnt in syntax.Members.OfType<GlobalStatmentSyntax>())
+            foreach (GlobalStatmentSyntax gblStmnt in gblStatements)
             {
                 statment = _binder.BindStatements(gblStmnt.Statement);
                 statementBuilder.Add(statment);
@@ -138,7 +147,7 @@ namespace rpgc.Binding
                     // check function paths
                     pathsError = ControlFlowGraph.AllPathsReturn(loweredBody);
                     if (_function.Type != TypeSymbol.Void && pathsError == false)
-                        _binder.diagnostics.reportNotAllCodePathsReturn(_function.Declaration.span, _function.Name);
+                        _binder.diagnostics.reportNotAllCodePathsReturn(_function.Declaration.Location(), _function.Name);
 
                     functionBodies.Add(_function, loweredBody);
 
@@ -285,6 +294,7 @@ namespace rpgc.Binding
         {
             ImmutableArray<ParamiterSymbol>.Builder parms;
             string name;
+            TypeClauseSyntax _type;
             TypeSymbol typ;
             TypeSymbol returnType;
             ParamiterSymbol par = null;
@@ -295,13 +305,14 @@ namespace rpgc.Binding
             paramiterNames = new HashSet<string>();
             if (syntax.Paramiters != null)
             {
-                foreach (var pram in syntax.Paramiters)
+                foreach (ParamiterSyntax pram in syntax.Paramiters)
                 {
                     name = pram.Identifier.sym.ToString();
-                    typ = bindTypeClause(pram.Type);
+                    _type = checkVarType(pram.Type, new TextLocation(pram.STREE.TEXT, pram.span));
+                    typ = bindTypeClause(_type);
 
                     if (paramiterNames.Add(name) == false)
-                        diagnostics.reportDuplicateParamiterName(pram.span, name, typ.Name);
+                        diagnostics.reportDuplicateParamiterName(pram.Location(), name, typ.Name);
                     else
                     {
                         par = new ParamiterSymbol(name, typ);
@@ -311,11 +322,12 @@ namespace rpgc.Binding
             }
 
             name = syntax.ProcedureName.sym.ToString();  //IdentfirePN.sym.ToString();
+            _type = checkVarType(syntax.ReturnType, new TextLocation(syntax.STREE.TEXT, syntax.span));
             returnType = bindTypeClause(syntax.ReturnType); //?? TypeSymbol.Void;
             procedur = new FunctionSymbol(name, parms.ToImmutable(), returnType, syntax, syntax.isSubroutine);
 
             if (scope.declareFunction(procedur) == false)
-                diagnostics.reportFunctionAlreadyDeclared(syntax.span, name);
+                diagnostics.reportFunctionAlreadyDeclared(syntax.Location(), name);
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
@@ -325,7 +337,7 @@ namespace rpgc.Binding
 
             if(canBeVoid == false && result.Type == TypeSymbol.Void)
             {
-                diagnostics.reportExpressionMustHaveValue(syntax.span);
+                diagnostics.reportExpressionMustHaveValue(syntax.Location());
                 return new BoundErrorExpression();
             }
 
@@ -373,7 +385,7 @@ namespace rpgc.Binding
             // return with no function 
             if (function_ == null)
             {
-                diagnostics.reportInvalidReturn(syntax.span);
+                diagnostics.reportInvalidReturn(syntax.Location());
                 return new BoundErrorStatement();
             }
             else
@@ -385,7 +397,7 @@ namespace rpgc.Binding
                     // funciton returns void but return, returns a value 
                     if (isNull == false)
                     {
-                        diagnostics.reportVoidFunctionReturnsValue(syntax.Expression.span);
+                        diagnostics.reportVoidFunctionReturnsValue(syntax.Expression.Location());
                         return new BoundErrorStatement();
                     }
 
@@ -397,7 +409,7 @@ namespace rpgc.Binding
                     // when function returns a value but return is returning a void
                     if (isNull == true)
                     {
-                        diagnostics.reportFunctionReturnsNULL(syntax.span, function_.Type);
+                        diagnostics.reportFunctionReturnsNULL(syntax.Location(), function_.Type);
                         return new BoundErrorStatement();
                     }
 
@@ -407,7 +419,7 @@ namespace rpgc.Binding
                     // check return type
                     if (function_.Type != expr.Type)
                     {
-                        diagnostics.reportCannotConvertType(syntax.Expression.span, expr.Type, function_.Type);
+                        diagnostics.reportCannotConvertType(syntax.Expression.Location(), expr.Type, function_.Type);
                         return new BoundErrorStatement();
                     }
                 }
@@ -467,7 +479,7 @@ namespace rpgc.Binding
             // user passed an unknown function
             if (function == null)
             {
-                diagnostics.reportBadFunctionOrProcedure(syntax.FunctionName.span, name);
+                diagnostics.reportBadFunctionOrProcedure(syntax.FunctionName.Location(), name);
 
                 return new BoundErrorExpression();
             }
@@ -475,7 +487,7 @@ namespace rpgc.Binding
             // check if user calling Procedure with EXSR
             if (function.isSubroutine == false && syntax.isExsrCall == true)
             {
-                diagnostics.reportProcedureCalledWithExsr(syntax.FunctionName.span, name);
+                diagnostics.reportProcedureCalledWithExsr(syntax.FunctionName.Location(), name);
 
                 return new BoundErrorExpression();
             }
@@ -483,7 +495,7 @@ namespace rpgc.Binding
             // check if user calling Subroutine like a Procedure
             if (function.isSubroutine == true && syntax.isExsrCall == false)
             {
-                diagnostics.reportSubroutineCalledAsProcedure(syntax.FunctionName.span, name);
+                diagnostics.reportSubroutineCalledAsProcedure(syntax.FunctionName.Location(), name);
 
                 return new BoundErrorExpression();
             }
@@ -515,7 +527,7 @@ namespace rpgc.Binding
                         span = syntax.CloseParen.span;
                     }
                 }
-                diagnostics.reportWrongArgumentCount(syntax.FunctionName.span, name, isCountGreater, argsCnt);
+                diagnostics.reportWrongArgumentCount(syntax.FunctionName.Location(), name, isCountGreater, argsCnt);
 
 
                 return new BoundErrorExpression();
@@ -535,7 +547,7 @@ namespace rpgc.Binding
                     //return new BoundErrorExpression();
                     if (argument.Type != TypeSymbol.ERROR)
                     {
-                        diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].span, argument.Type, parametr.type);
+                        diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].Location(), argument.Type, parametr.type);
                     }
                     hasErrors = true;
                 }
@@ -555,11 +567,11 @@ namespace rpgc.Binding
 
             expression = BindExpression(syntax);
 
-            return BindConversion(expression, type, syntax.span);
+            return BindConversion(expression, type, syntax.Location());
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
-        private BoundExpression BindConversion(BoundExpression expression, TypeSymbol type, TextSpan lspan, bool isAssignment = false)
+        private BoundExpression BindConversion(BoundExpression expression, TypeSymbol type, TextLocation lTxtLoc, bool isAssignment = false)
         {
             Conversion convertn;
 
@@ -573,7 +585,7 @@ namespace rpgc.Binding
             if (convertn.Exits == false)
             {
                 if (expression.Type != TypeSymbol.ERROR && type != TypeSymbol.ERROR)
-                    diagnostics.reportCannotConvertType(lspan, expression.Type, type);
+                    diagnostics.reportCannotConvertType(lTxtLoc, expression.Type, type);
                 return new BoundErrorExpression();
             }
 
@@ -618,7 +630,7 @@ namespace rpgc.Binding
             // loop error no condition was given
             if (condition == null || condition.Type == TypeSymbol.ERROR)
             {
-                diagnostics.reportLoopWithoutCondition(syntax.span, syntax.Keyword.sym.ToString());
+                diagnostics.reportLoopWithoutCondition(syntax.Location(), syntax.Keyword.sym.ToString());
                 return new BoundErrorStatement();
             }
 
@@ -647,7 +659,7 @@ namespace rpgc.Binding
 
             if (scope.checkLocalVariables(name) == false)
             {
-                diagnostics.reportVariableDoesNotExist(syntax.Identifier.span, name);
+                diagnostics.reportVariableDoesNotExist(syntax.Identifier.Location(), name);
                 return new BoundErrorStatement();
             }
             else
@@ -672,7 +684,7 @@ namespace rpgc.Binding
             // loop error no condition was given
             if (condition == null || condition.Type == TypeSymbol.ERROR)
             {
-                diagnostics.reportLoopWithoutCondition(syntax.span, syntax.Keyword.sym.ToString());
+                diagnostics.reportLoopWithoutCondition(syntax.Location(), syntax.Keyword.sym.ToString());
                 return new BoundErrorStatement();
             }
 
@@ -692,7 +704,7 @@ namespace rpgc.Binding
 
             if (condition == null || condition.Type == TypeSymbol.ERROR)
             {
-                diagnostics.reportIfWithoutCondition(syntax.span);
+                diagnostics.reportIfWithoutCondition(syntax.Location());
                 return new BoundErrorStatement();
             }
 
@@ -712,7 +724,7 @@ namespace rpgc.Binding
 
             if (_loopStack.Count == 0)
             {
-                diagnostics.reportLeaveOrIterWithoutLoop(syntax.span, "break");
+                diagnostics.reportLeaveOrIterWithoutLoop(syntax.Location(), "break");
                 return BindErrorStatement();
             }
 
@@ -727,7 +739,7 @@ namespace rpgc.Binding
 
             if (_loopStack.Count == 0)
             {
-                diagnostics.reportLeaveOrIterWithoutLoop(syntax.span, "break");
+                diagnostics.reportLeaveOrIterWithoutLoop(syntax.Location(), "break");
                 return BindErrorStatement();
             }
 
@@ -774,7 +786,7 @@ namespace rpgc.Binding
 
             if (syntax.Keyword.kind == TokenKind.TK_VARDCONST)
             {
-                tvar = new VariableDeclarationSyntax(syntax.Keyword, syntax.Identifier, expression.Type, null, null);
+                tvar = new VariableDeclarationSyntax(syntax.STREE, syntax.Keyword, syntax.Identifier, expression.Type, null, null);
                 variable = bindVariable(tvar, true);
             }
             else
@@ -784,7 +796,7 @@ namespace rpgc.Binding
 
             //if (scope.declare(variable) == false)
             //{
-            //    diagnostics.reportVariableAlreadyDeclared(syntax.span, name);
+            //    diagnostics.reportVariableAleadyDeclared(syntax.span, name);
             //    return new BoundErrorStatement();
             //}
 
@@ -832,7 +844,7 @@ namespace rpgc.Binding
 
             if (scope.lookup(name, out _variable) == false)
             {
-                diagnostics.reportUndefinedName(syntax.IDENTIFIERTOKEN.span, name);
+                diagnostics.reportUndefinedName(syntax.IDENTIFIERTOKEN.Location(), name);
                 return new BoundErrorExpression();
             }
 
@@ -853,19 +865,19 @@ namespace rpgc.Binding
             // check if the variable has been declared
             if (scope.lookup(name, out _variable) == false)
             {
-                diagnostics.reportUndefinedName(syntax.IDENTIFIERTOKEN.span, name);
+                diagnostics.reportUndefinedName(syntax.IDENTIFIERTOKEN.Location(), name);
                 return new BoundErrorExpression();
             }
 
             if (_variable.IsReadOnly == true)
             {
-                diagnostics.reportAssignmentOfConstantVar(syntax.IDENTIFIERTOKEN.span, name);
+                diagnostics.reportAssignmentOfConstantVar(syntax.IDENTIFIERTOKEN.Location(), name);
                 return new BoundErrorExpression();
             }
 
             // check if the type of the variable matches its assigned expression
             // then bind the expression
-            convExpr = BindConversion(boundExp, _variable.type, syntax.span, true);
+            convExpr = BindConversion(boundExp, _variable.type, syntax.Location(), true);
 
             return new BoundAssignmentExpression(_variable, convExpr);
         }
@@ -895,7 +907,7 @@ namespace rpgc.Binding
             // account for errors
             if (boundOperatorKind == null)
             {
-                diagnostics.reportUndefinedUniaryOp(syntax.Operand.span, syntax.Operand.sym.ToString(), expression.Type);
+                diagnostics.reportUndefinedUniaryOp(syntax.Operand.Location(), syntax.Operand.sym.ToString(), expression.Type);
                 return new BoundErrorExpression();
             }
 
@@ -919,7 +931,7 @@ namespace rpgc.Binding
             // account for errors
             if (boundOperatorKind == null)
             {
-                diagnostics.reportUndefinedBynaryOp(syntax.operatorToken.span, syntax.operatorToken.sym.ToString(), left.Type, right.Type);
+                diagnostics.reportUndefinedBynaryOp(syntax.operatorToken.Location(), syntax.operatorToken.sym.ToString(), left.Type, right.Type);
                 return new BoundErrorExpression();
             }
 
@@ -932,16 +944,18 @@ namespace rpgc.Binding
             string name;
             VariableSymbol variable;
             TypeSymbol type;
+            TypeClauseSyntax _type;
 
             // bind type only on variables NOT CONSTANTS
             if (isConstant == false)
             {
-                type = bindTypeClause(syntax.TypClas);
+                _type = checkVarType(syntax.TypClas, new TextLocation(syntax.STREE.TEXT, syntax.span));
+                type = bindTypeClause(_type);
 
                 // check if variable has a nmae
                 if (syntax == null || syntax.Identifier.kind == TokenKind.TK_BADTOKEN)
                 {
-                    diagnostics.reportVariableWithNoName(syntax.span);
+                    diagnostics.reportVariableWithNoName(syntax.Location());
                     return null;
                 }
             }
@@ -961,7 +975,7 @@ namespace rpgc.Binding
             // function returns true when varialbe is added
             if (scope.declare(variable) == false)
             {
-                diagnostics.reportVariableAlreadyDeclared(syntax.span, name);
+                diagnostics.reportVariableAlreadyDeclared(syntax.Location(), name);
                 return null;
             }
 
@@ -974,22 +988,28 @@ namespace rpgc.Binding
             TypeSymbol ret;
             string typename;
 
-            if (typClas == null)
-            {
-                diagnostics.reportTypeNotGiven(typClas.span);
-                return null;
-            }
-
             typename = typClas.Identifier.sym.ToString();
             ret = SyntaxFacts.lookupType(typename);
 
             if (ret == null)
             {
-                diagnostics.reportUndefinedType(typClas.span, typename);
+                diagnostics.reportUndefinedType(typClas.Location(), typename);
                 return null;
             }
 
             return ret;
+        }
+
+        // ///////////////////////////////////////////////////////////////////////////////
+        private TypeClauseSyntax checkVarType(TypeClauseSyntax typClas, TextLocation tloc)
+        {
+            if (typClas == null)
+            {
+                diagnostics.reportTypeNotGiven(tloc);
+                return null;
+            }
+
+            return typClas;
         }
 
         // ///////////////////////////////////////////////////////////////////////////////

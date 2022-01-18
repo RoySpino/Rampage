@@ -11,7 +11,8 @@ namespace rpgc.Syntax
         public override TokenKind kind => TokenKind.TK_TYPCLAUSE;
         public SyntaxToken Identifier { get; }
 
-        public TypeClauseSyntax(SyntaxToken idenifir)
+        public TypeClauseSyntax(SyntaxTree stree, SyntaxToken idenifir)
+            : base(stree)
         {
             Identifier = idenifir;
         }

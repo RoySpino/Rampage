@@ -19,7 +19,8 @@ namespace rpgc.Syntax
         public ExpresionSyntax Increment { get; }
         public StatementSyntax Body { get; }
 
-        public ForStatementSyntax(SyntaxToken keyword, SyntaxToken identifier, SyntaxToken equalsTok, ExpresionSyntax lowerBound, SyntaxToken keyword_To, ExpresionSyntax upperBound, StatementSyntax body, SyntaxToken keyword_By = null, ExpresionSyntax inc = null)
+        public ForStatementSyntax(SyntaxTree stree,SyntaxToken keyword, SyntaxToken identifier, SyntaxToken equalsTok, ExpresionSyntax lowerBound, SyntaxToken keyword_To, ExpresionSyntax upperBound, StatementSyntax body, SyntaxToken keyword_By = null, ExpresionSyntax inc = null)
+            :base(stree)
         {
             Keyword = keyword;
             Identifier = identifier;
@@ -30,12 +31,12 @@ namespace rpgc.Syntax
             Body = body;
 
             if (keyword_By == null)
-                Keyword_By = new SyntaxToken(TokenKind.TK_TO, 0, 0, "TO");
+                Keyword_By = new SyntaxToken(STREE, TokenKind.TK_TO, 0, 0, "TO");
             else
                 Keyword_To = keyword_By;
 
             if (inc == null)
-                Increment = new LiteralExpressionSyntax(new SyntaxToken(TokenKind.TK_INTEGER, 0, 0, "1"));
+                Increment = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_INTEGER, 0, 0, "1"));
             else
                 Increment = inc;
         }

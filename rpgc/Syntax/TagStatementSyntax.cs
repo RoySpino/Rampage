@@ -12,7 +12,8 @@ namespace rpgc.Syntax
         public SyntaxToken TagKeyword { get; }
         public string LableName { get; }
 
-        public TagStatementSyntax(SyntaxToken TagStatement, string Name)
+        public TagStatementSyntax(SyntaxTree stree, SyntaxToken TagStatement, string Name)
+            : base(stree)
         {
             LableName = Name;
             TagKeyword = TagStatement;

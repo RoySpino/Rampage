@@ -30,18 +30,21 @@ namespace rpgc.Syntax
         string currentSub;
         int symStart, prevLine;
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        private SyntaxTree _SyntaxTree;
+        private int originalSrucLinesCount;
 
         int start;
         TokenKind kind;
         object Value;
 
-        public Lexer(SourceText s)
+        public Lexer(SyntaxTree stree)
         {
-            source = s;
+            _SyntaxTree = stree;
+            source = _SyntaxTree.TEXT;
             pos = -1;
             linePos = 0;
             lineNum = 1;
-            sSize = s.Length;
+            sSize = source.Length;
             doDecmiation = true;
             prevLine = -1;
             specChkStr = "CTL-OPT";
@@ -69,7 +72,7 @@ namespace rpgc.Syntax
             // assign D or C spec
             if (mainDic.ContainsKey(curSpec) == false)
             {
-                if (inDBlock == true)
+                if (mainDic[specChkStr] == 3)
                     curSpec = "DCL-S";
                 else
                     curSpec = "C";
@@ -117,9 +120,11 @@ namespace rpgc.Syntax
         // ////////////////////////////////////////////////////////////////////////////////////
         private bool specCheckHelper(int lineNum, string spec)
         {
-            bool result = true;
+            bool result;
 
-            if (lineNum != prevLine)
+            if (lineNum == prevLine)
+                return true;
+            else
             {
                 result = isGoodSpec(spec, lineNum);
                 prevLine = lineNum;
@@ -265,14 +270,16 @@ namespace rpgc.Syntax
             MatchCollection mth;
             SyntaxToken tmpTok;
             bool Ft, Hv, Em;
-            bool getAnotherCard;
+            bool isEOIInList;
 
             Ft = (doDecmiation == true);
             Hv = (strucLexLine.Count > 0);
             Em = (sourceLines.Count == 0);
 
+            // ----------------------------------------------------------------
+            // THIS IF BLOCK EXECUTES ONLY ONCE
             // If block only executes when
-            // Ft: On the first time run or 
+            // Ft: On the First Time run or 
             // Hv: the list strucLexLine has elements (Has a value) or 
             // Em: sourceLines is not empty
             if (Ft == true || (Hv == false && Em == false))
@@ -286,6 +293,7 @@ namespace rpgc.Syntax
                     sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
                     //sorc = sorc.Substring(0, sorc.Length - 1);
                     arr = sorc.Split('¶');
+                    originalSrucLinesCount = arr.Length;
 
                     // save array as list
                     sourceLines = new List<string>(arr);
@@ -303,13 +311,22 @@ namespace rpgc.Syntax
 
                     // remove comments and add line to list
                     line = SyntaxFacts.normalizeComments(line);
+
                     lineFeeder.Add(new StructCard(line, (i + 1)));
                 }
 
-                // decimate line into factor strings
-                strucLexLine = Decimator.doDecimation3(lineFeeder, ref diagnostics);
+                // generate a list of tokens from the soruce code
+                strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
+                
+                // check if there is a EOI token in the token list
+                isEOIInList = (from tkn in strucLexLine
+                               select tkn.kind == TokenKind.TK_EOI).FirstOrDefault();
+                if (isEOIInList == false)
+                    strucLexLine.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_EOI, 1, 0, originalSrucLinesCount, 0));
             }
+            // ----------------------------------------------------------------
 
+            // treat list like a que when the lexer is called
             // pop the first element from the token list and return it
             tmpTok = strucLexLine[0];
             strucLexLine.RemoveAt(0);
@@ -354,6 +371,7 @@ namespace rpgc.Syntax
         public SyntaxToken doLex()
         {
             string symbol = "";
+            TextLocation location;
 
             kind = TokenKind.TK_BADTOKEN;
             Value = null;
@@ -364,7 +382,7 @@ namespace rpgc.Syntax
             if (pos == 0 && curChar == '*' && peek(1) == '*')
             {
                 doFreeLex = checkFree();
-                return new SyntaxToken(TokenKind.TK_SPACE, 0, 0, "", symStart);
+                return new SyntaxToken(_SyntaxTree, TokenKind.TK_SPACE, 0, 0, "", symStart);
             }
 
             // compile a traditinal RPG Program
@@ -376,7 +394,7 @@ namespace rpgc.Syntax
             if (curChar == '/' && peek(1) == '/')
             {
                 ignoreCommentLine();
-                return new SyntaxToken(kind, 0, 0, "", symStart);
+                return new SyntaxToken(_SyntaxTree, kind, 0, 0, "", symStart);
             }
 
             // -------------------------------------------------------------------------------------------------
@@ -498,7 +516,8 @@ namespace rpgc.Syntax
                         }
                         else
                         {
-                            diagnostics.reportBadCharacter(curChar, 1);
+                            location = new TextLocation(source, new TextSpan(pos, 1, lineNum, linePos));
+                            diagnostics.reportBadCharacter(location, curChar, 1);
                             Value = "";
                             symbol = curChar.ToString();
                         }
@@ -506,7 +525,7 @@ namespace rpgc.Syntax
                     break;
             }
 
-            return new SyntaxToken(kind, lineNum, start, Value, symStart);
+            return new SyntaxToken(_SyntaxTree, kind, lineNum, start, Value, symStart);
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
@@ -515,6 +534,7 @@ namespace rpgc.Syntax
             bool isInString;
             int charCnt;
             string text;
+            TextLocation location;
 
             // record current position and skip first single quoat
             start = pos;
@@ -537,7 +557,8 @@ namespace rpgc.Syntax
                     case '\0':
                     case '\n':
                     case '\r':
-                        diagnostics.reportBadString(new TextSpan(start, charCnt, lineNum, pos));
+                        location = new TextLocation(source, new TextSpan(start, 1, lineNum, linePos));
+                        diagnostics.reportBadString(location);
                         isInString = false;
                         break;
                     case '\'':
@@ -562,6 +583,7 @@ namespace rpgc.Syntax
         {
             string symbol = "";
             int intDummy;
+            TextLocation location;
 
             start = pos;
             symStart = linePos;
@@ -573,7 +595,10 @@ namespace rpgc.Syntax
             }
 
             if (int.TryParse(symbol, out intDummy) == false)
-                diagnostics.reportInvalidNumber(symbol, TypeSymbol.Integer, start, symbol.Length);
+            {
+                location = new TextLocation(source, new TextSpan(start, 1, lineNum, linePos));
+                diagnostics.reportInvalidNumber(location, symbol, TypeSymbol.Integer, start, symbol.Length);
+            }
 
             kind = TokenKind.TK_INTEGER;
             Value = intDummy;
@@ -616,6 +641,7 @@ namespace rpgc.Syntax
         {
             string symbol = "";
             bool isGoodSpecResult = false;
+            TextLocation location;
 
             start = pos;
             symStart = linePos;
@@ -636,19 +662,14 @@ namespace rpgc.Syntax
 
             // get any declaration keywords
             if (((symbol == "DCL" || symbol == "END") && peek(0) == '-') || (symbol == "BEGSR" || symbol == "ENDSR"))
-            {
                 symbol = getDeclaration(symbol);
 
-                isGoodSpecResult = specCheckHelper(lineNum, symbol);
-            }
-            else
-            {
-                // assume code is in C spec Section
-                isGoodSpecResult = specCheckHelper(lineNum, "C");
-            }
-
+            isGoodSpecResult = specCheckHelper(lineNum, symbol);
             if (isGoodSpecResult == false)
-                diagnostics.reportWrongSpecLoc(symbol, specChkStr, lineNum, linePos);
+            {
+                location = new TextLocation(source, new TextSpan(start, 1, lineNum, linePos));
+                diagnostics.reportWrongSpecLoc(location, symbol, specChkStr, lineNum, linePos);
+            }
 
             // check if the symbol is a start/end of a block
             setLineType(symbol);

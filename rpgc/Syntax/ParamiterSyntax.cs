@@ -9,7 +9,8 @@ namespace rpgc.Syntax
         public SyntaxToken Identifier { get; }
         public TypeClauseSyntax Type { get; }
 
-        public ParamiterSyntax(SyntaxToken ident, TypeClauseSyntax typ)
+        public ParamiterSyntax(SyntaxTree stree,SyntaxToken ident, TypeClauseSyntax typ)
+            :base(stree)
         {
             Identifier = ident;
             Type = typ;

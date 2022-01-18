@@ -14,10 +14,11 @@ namespace rpgc
     {
         public static void Main(string[] args)
         {
-            string path, text;
+            string paths, text, fnam;
             Complation _compilation;
             SyntaxTree st;
             EvaluationResult res;
+            List<SyntaxTree> trees;
 
             if (args.Length == 0)
             {
@@ -26,13 +27,16 @@ namespace rpgc
             }
             else
             {
-                if (args.Length > 1)
-                    Console.Error.WriteLine("Only one file document is valid now");
+                if (args.Length >= 1)
+                {
+                    doCompile(args);
+                }
                 else
                 {
-                    path = args.Single();
-                    text = File.ReadAllText(path);
-                    st = SyntaxTree.parce(text);
+                    paths = args.Single();
+                    text = File.ReadAllText(paths);
+                    fnam = Path.GetFileName(paths);
+                    st = SyntaxTree.Parse(text, fnam);
                     
                     //st.ROOT.writeTo(Console.Out);
 
@@ -44,6 +48,46 @@ namespace rpgc
                         TextWriterExtensions.WriteDiagnostics(Console.Error, res._Diagnostics);
                 }
             }
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private static void doCompile(string[] paths)
+        {
+            string text, fnam;
+            Complation _compilation;
+            SyntaxTree st;
+            EvaluationResult res;
+            List<SyntaxTree> sTrees;
+
+            sTrees = new List<SyntaxTree>();
+
+            foreach (string path in paths)
+            {
+                if (File.Exists(path))
+                {
+                    text = File.ReadAllText(path);
+                    fnam = Path.GetFileName(path);
+                    sTrees.Add(SyntaxTree.Parse(text, fnam));
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    Console.WriteLine($"error: Source file `{Path.GetFileName(path)}' could not be found");
+                    Console.ResetColor();
+                    Console.WriteLine("compilation terminated.");
+
+                    sTrees.Clear();
+                    sTrees = null;
+                    return;
+                }
+            }
+
+            _compilation = new Complation(sTrees.ToArray());
+            res = _compilation.evalate(new Dictionary<VariableSymbol, object>());
+
+            // display diagnostics if any
+            if (res._Diagnostics.Any() == true)
+                TextWriterExtensions.WriteDiagnostics(Console.Error, res._Diagnostics);
         }
     }
 }

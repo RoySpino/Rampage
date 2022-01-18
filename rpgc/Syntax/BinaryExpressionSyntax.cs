@@ -13,7 +13,8 @@ namespace rpgc.Syntax
         public SyntaxToken operatorToken { get; }
         public ExpresionSyntax right { get; }
 
-        public BinaryExpressionSyntax(ExpresionSyntax A, SyntaxToken operaton, ExpresionSyntax B)
+        public BinaryExpressionSyntax(SyntaxTree stree, ExpresionSyntax A, SyntaxToken operaton, ExpresionSyntax B)
+            : base(stree)
         {
             left = A;
             right = B;

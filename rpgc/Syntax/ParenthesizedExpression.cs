@@ -13,7 +13,8 @@ namespace rpgc.Syntax
         public ExpresionSyntax Expression { get; }
         public SyntaxToken CLOSEParen { get; }
 
-        public ParenthesizedExpression(SyntaxToken openParen, ExpresionSyntax expression, SyntaxToken closeParen)
+        public ParenthesizedExpression(SyntaxTree stree,SyntaxToken openParen, ExpresionSyntax expression, SyntaxToken closeParen)
+            :base(stree)
         {
             OPENParen = openParen;
             CLOSEParen = closeParen;

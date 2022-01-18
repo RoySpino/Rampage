@@ -15,11 +15,13 @@ namespace rpgc.Text
         public string ToString(int Start, int length) => _Text.Substring(Start, length);
         public char this[int index] => ((index < _Text.Length) ?_Text[index]: '\0');
         public int Length => _Text.Length;
+        public string FileName { get; }
 
-        public SourceText(string text)
+        public SourceText(string text, string fileName_)
         {
             _Text = text;
             Lines = parseLines(this, text);
+            FileName = fileName_;
         }
 
         // ///////////////////////////////////////////////////////////////////////////
@@ -55,6 +57,12 @@ namespace rpgc.Text
         }
 
         // ///////////////////////////////////////////////////////////////////////////
+        public static SourceText FROM(string text, string filename="")
+        {
+            return new SourceText(text, filename);
+        }
+
+        // ///////////////////////////////////////////////////////////////////////////
         private static void addLine(ImmutableArray<TextLine>.Builder output, SourceText sourceText, int pos, int lineStart, int lineBreakWdith)
         {
             TextLine ret;
@@ -87,7 +95,7 @@ namespace rpgc.Text
         // ///////////////////////////////////////////////////////////////////////////
         public static SourceText from(string text)
         {
-            return new SourceText(text);
+            return new SourceText(text, "");
         }
 
         // ///////////////////////////////////////////////////////////////////////////

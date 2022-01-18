@@ -23,7 +23,8 @@ namespace rpgc.Syntax
         private SyntaxToken inz;
         private ExpresionSyntax inzVal;
 
-        public VariableDeclarationSyntax(SyntaxToken keyword, SyntaxToken identifier, TypeSymbol typ, SyntaxToken initKeyWord = null, ExpresionSyntax initilize = null)
+        public VariableDeclarationSyntax(SyntaxTree stree, SyntaxToken keyword, SyntaxToken identifier, TypeSymbol typ, SyntaxToken initKeyWord = null, ExpresionSyntax initilize = null)
+            : base(stree)
         {
             Keyword = keyword;
             Identifier = identifier;
@@ -38,7 +39,8 @@ namespace rpgc.Syntax
 
         // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Constant deffinition
-        public VariableDeclarationSyntax(SyntaxToken keyword, SyntaxToken identifier, ExpresionSyntax initilize)
+        public VariableDeclarationSyntax(SyntaxTree stree,SyntaxToken keyword, SyntaxToken identifier, ExpresionSyntax initilize)
+            : base(stree)
         {
             Keyword = keyword;
             Identifier = identifier;
@@ -52,7 +54,8 @@ namespace rpgc.Syntax
 
         // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Dcl-s _NAME_ zoned inz( _VAL_ )
-        public VariableDeclarationSyntax(SyntaxToken keyworkd, SyntaxToken identifier, TypeClauseSyntax typClas, SyntaxToken initKeyWord = null, ExpresionSyntax initilize = null)
+        public VariableDeclarationSyntax(SyntaxTree stree, SyntaxToken keyworkd, SyntaxToken identifier, TypeClauseSyntax typClas, SyntaxToken initKeyWord = null, ExpresionSyntax initilize = null)
+            : base(stree)
         {
             Keyword = keyworkd;
             Identifier = identifier;
@@ -78,36 +81,36 @@ namespace rpgc.Syntax
                 }
                 else
                 {
-                    inz = new SyntaxToken(TokenKind.TK_INZ, 0, 0, "INZ");
+                    inz = new SyntaxToken(STREE, TokenKind.TK_INZ, 0, 0, "INZ");
 
                     switch (typ.Name)
                     {
                         case "IND":
-                            inzVal = new LiteralExpressionSyntax(new SyntaxToken(TokenKind.TK_INDON, 0, 0, true));
+                            inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_INDON, 0, 0, true));
                             break;
                         case "INT(10)":
                         case "ZONED":
                         case "PACKED":
                         case "FLOAT":
-                            inzVal = new LiteralExpressionSyntax(new SyntaxToken(TokenKind.TK_INTEGER, 0, 0, 0));
+                            inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_INTEGER, 0, 0, 0));
                             break;
                         case "DATE":
                         case "TIMESTAMP":
                         case "TIME":
-                            inzVal = new LiteralExpressionSyntax(new SyntaxToken(TokenKind.TK_DATETIME, 0, 0, DateTime.Now));
+                            inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_DATETIME, 0, 0, DateTime.Now));
                             break;
                         case "STRING":
                         case "CHAR":
                         case "VARCHAR":
                         default:
-                            inzVal = new LiteralExpressionSyntax(new SyntaxToken(TokenKind.TK_DATETIME, 0, 0, ""));
+                            inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_DATETIME, 0, 0, ""));
                             break;
                     }
                 }
             }
             else
             {
-                inzVal = new LiteralExpressionSyntax(new SyntaxToken(TokenKind.TK_INDON, 0, 0, true));
+                inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_INDON, 0, 0, true));
             }
         }
     }

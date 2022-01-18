@@ -10,7 +10,7 @@ namespace rpgc.Syntax
     {
         public override TokenKind kind => TokenKind.TK_GLBSTMNT;
         public StatementSyntax Statement { get; }
-        public GlobalStatmentSyntax(StatementSyntax _statement)
+        public GlobalStatmentSyntax(SyntaxTree stree, StatementSyntax _statement) :base(stree)
         {
             Statement = _statement;
         }

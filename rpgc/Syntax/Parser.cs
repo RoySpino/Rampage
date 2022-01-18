@@ -19,15 +19,18 @@ namespace rpgc.Syntax
         string curSubroutineScope;
         DiagnosticBag diagnostics = new DiagnosticBag();
         public readonly ImmutableArray<SyntaxToken> tokens;
-        public readonly SourceText source;
+        readonly SyntaxTree _sTree;
+        SourceText text;
+        TextLocation location;
 
-        public Parser(SourceText txt)
+        public Parser(SyntaxTree syntaxTree)
         {
             SyntaxToken ttkn;
             List<SyntaxToken> _tokens = new List<SyntaxToken>();
-            lex = new Lexer(txt);
+            lex = new Lexer(syntaxTree);
+            text = syntaxTree.TEXT;
             pos = 0;
-            source = txt;
+            _sTree = syntaxTree;
 
             // get tokens
             do
@@ -37,31 +40,29 @@ namespace rpgc.Syntax
 
                 // special case for else add block end befor else
                 if (tok.kind == TokenKind.TK_ELSE)
-                    _tokens.Add(new SyntaxToken(TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
-
-                /* exit on error
-                if (tok.kind == TokenKind.TK_BADTOKEN)
-                {
-                    _tokens.Add(tok);
-                    break;
-                }
-                */
+                    _tokens.Add(new SyntaxToken(_sTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
 
                 // save avalable tokens skipping nulls and space
-                if (tok != null && tok.kind != TokenKind.TK_SPACE)
-                    _tokens.Add(tok);
+                if (tok == null || tok.kind == TokenKind.TK_SPACE || tok.kind == TokenKind.TK_BADTOKEN)
+                    continue;
+                    
+                _tokens.Add(tok);
             }
             while (tok.kind != TokenKind.TK_EOI);
 
+            // setup local token array and merge lexer diagnostics
             tokens = _tokens.ToImmutableArray();
             diagnostics.AddRange(lex.getDiagnostics());
             tCount = _tokens.Count;
 
+            // setup current token and line turminator token
             if (tokens.Count() > 0)
             {
                 current = tokens[0];
 
+                // new line terminator is used for fixed format RPG
                 ttkn = tokens.Where(tk => tk.kind == TokenKind.TK_NEWLINE).FirstOrDefault();
+
                 if (ttkn == null)
                     EndToken = TokenKind.TK_SEMI;
                 else
@@ -89,7 +90,7 @@ namespace rpgc.Syntax
                 case TokenKind.TK_EXSR:
                      return parseSubroutineCall();
                 case TokenKind.TK_BADTOKEN:
-                    return new ErrorExpressionSyntax();
+                    return new ErrorExpressionSyntax(_sTree);
                 case TokenKind.TK_IDENTIFIER:
                 default:
                     return parseTokenNamedOrCallExpression();
@@ -126,7 +127,7 @@ namespace rpgc.Syntax
                 case TokenKind.TK_RETURN:
                     return parseReturnStatement();
                 case TokenKind.TK_BADTOKEN:
-                    return new ErrorStatementSyntax();
+                    return new ErrorStatementSyntax(_sTree);
                 default:
                     return parseExpressionStaement();
             }
@@ -168,8 +169,8 @@ namespace rpgc.Syntax
                 return nextToken();
 
             //addError(string.Format("Unreconized token [{2}] at ({0},{1})", current.line, current.pos, current.sym));
-            diagnostics.reportUnexpectedToken(current.span, current.kind, tok);
-            return new SyntaxToken(TokenKind.TK_BADTOKEN, current.line, current.pos, current.sym);
+            diagnostics.reportUnexpectedToken(current.Location(), current.kind, tok);
+            return new SyntaxToken(_sTree, TokenKind.TK_BADTOKEN, current.line, current.pos, current.sym);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -179,8 +180,8 @@ namespace rpgc.Syntax
                 return nextToken();
 
             //addError(string.Format("Unreconized token [{2}] at ({0},{1})", current.line, current.pos, current.sym));
-            diagnostics.reportUnexpectedToken(current.span, current.kind, tok);
-            return new SyntaxToken(TokenKind.TK_BADTOKEN, current.line, current.pos, current.sym);
+            diagnostics.reportUnexpectedToken(current.Location(), current.kind, tok);
+            return new SyntaxToken(_sTree, TokenKind.TK_BADTOKEN, current.line, current.pos, current.sym);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -207,7 +208,7 @@ namespace rpgc.Syntax
             {
                 operatorToken = nextToken();
                 operand = parsePrimaryExpression();
-                left = new UinaryExpressionSyntax(operatorToken, operand);
+                left = new UinaryExpressionSyntax(_sTree, operatorToken, operand);
             }
             else
                 left = parsePrimaryExpression();
@@ -221,7 +222,7 @@ namespace rpgc.Syntax
 
                 operatorToken = nextToken();
                 right = parseBinaryExpresion(precedence);
-                left = new BinaryExpressionSyntax(left, operatorToken, right);
+                left = new BinaryExpressionSyntax(_sTree, left, operatorToken, right);
             }
 
             return left;
@@ -242,10 +243,13 @@ namespace rpgc.Syntax
                     identifierToken = nextToken();
                     operatorToken = nextToken();
                     right = parceAssignmentExpression();
-                    return new AssignmentExpressionSyntax(identifierToken, operatorToken, right);
+                    return new AssignmentExpressionSyntax(_sTree, identifierToken, operatorToken, right);
                 }
                 else
-                    diagnostics.reportAssignmentWithotResult(peek(1).span);
+                {
+                    location = new TextLocation(text, peek(1).span);
+                    diagnostics.reportAssignmentWithotResult(location);
+                }
             }
 
             // next token is not an assignment
@@ -271,7 +275,7 @@ namespace rpgc.Syntax
             //if (identifier.kind == TokenKind.TK_BADTOKEN)
             //    nextToken();
 
-            return new NamedExpressionSyntax(identifier);
+            return new NamedExpressionSyntax(_sTree,identifier);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -286,14 +290,15 @@ namespace rpgc.Syntax
 
             if (identifier.sym.ToString() == curSubroutineScope)
             {
-                diagnostics.reportSubroutineRecursion(new TextSpan(0, identifier.sym.ToString().Length, identifier.linePosition, identifier.pos));
-                return new ErrorExpressionSyntax();
+                location = new TextLocation(text, new TextSpan(0, identifier.sym.ToString().Length, identifier.linePosition, identifier.pos));
+                diagnostics.reportSubroutineRecursion(location);
+                return new ErrorExpressionSyntax(_sTree);
             }
 
-            return new CallExpressionSyntax(identifier,
-                                            new SyntaxToken(TokenKind.TK_PARENOPEN, 0, 0, "("),
+            return new CallExpressionSyntax(_sTree, identifier,
+                                            new SyntaxToken(_sTree, TokenKind.TK_PARENOPEN, 0, 0, "("),
                                             new SeperatedSyntaxList<ExpresionSyntax>(ImmutableArray.CreateBuilder<SyntaxNode>().ToImmutable()),
-                                            new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0, ")"),
+                                            new SyntaxToken(_sTree, TokenKind.TK_PARENCLOSE, 0, 0, ")"),
                                             true);
         }
 
@@ -323,13 +328,16 @@ namespace rpgc.Syntax
             // function name
             identifier = match(TokenKind.TK_IDENTIFIER);
 
+            if (identifier.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+
             // get value untill semicolon
             exp = parceExplicitCallArguments();
 
-            return new CallExpressionSyntax(identifier,
-                                            new SyntaxToken(TokenKind.TK_PARENOPEN, 0, 0, "("),
+            return new CallExpressionSyntax(_sTree, identifier,
+                                            new SyntaxToken(_sTree, TokenKind.TK_PARENOPEN, 0, 0, "("),
                                             exp,
-                                            new SyntaxToken(TokenKind.TK_PARENCLOSE, 0, 0, ")"));
+                                            new SyntaxToken(_sTree, TokenKind.TK_PARENCLOSE, 0, 0, ")"));
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -341,13 +349,23 @@ namespace rpgc.Syntax
 
             // function name
             identifier = match(TokenKind.TK_IDENTIFIER);
+            if (identifier.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
 
             // parethesies
             OpenPar = match(TokenKind.TK_PARENOPEN);
-            exp = parceArguments();
-            ClosePar = match(TokenKind.TK_PARENCLOSE);
+            if (OpenPar.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
 
-            return new CallExpressionSyntax(identifier, OpenPar, exp, ClosePar);
+            // arguments
+            exp = parceArguments();
+
+            // parethesies
+            ClosePar = match(TokenKind.TK_PARENCLOSE);
+            if (ClosePar.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+
+            return new CallExpressionSyntax(_sTree, identifier, OpenPar, exp, ClosePar);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -395,9 +413,16 @@ namespace rpgc.Syntax
             ExpresionSyntax exp;
 
             left = match(TokenKind.TK_PARENOPEN);
+            if (left.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+            
             exp = parseBinaryExpresion();
+
             righ = match(TokenKind.TK_PARENCLOSE);
-            return new ParenthesizedExpression(left, exp, righ);
+            if (righ.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+
+            return new ParenthesizedExpression(_sTree, left, exp, righ);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -407,25 +432,34 @@ namespace rpgc.Syntax
             bool bolValue;
 
             bolValue = (current.kind == TokenKind.TK_INDON);
-            keyworkdTok = (bolValue ? match(TokenKind.TK_INDON) : match(TokenKind.TK_INDOFF));
 
-            return new LiteralExpressionSyntax(keyworkdTok, bolValue);
+            keyworkdTok = (bolValue ? match(TokenKind.TK_INDON) : match(TokenKind.TK_INDOFF));
+            if (keyworkdTok.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+
+            return new LiteralExpressionSyntax(_sTree, keyworkdTok, bolValue);
         }
 
         // ///////////////////////////////////////////////////////////////////////
         private ExpresionSyntax parseNumberLiteral()
         {
             SyntaxToken numberToken;
+
             numberToken = match(TokenKind.TK_INTEGER);
-            return new LiteralExpressionSyntax(numberToken);
+            if (numberToken.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+
+            return new LiteralExpressionSyntax(_sTree,numberToken);
         }
 
         // /////////////////////////////////////////////////////////////////////////
         private ExpresionSyntax parseStringLiteral()
         {
             SyntaxToken stringToken;
+
             stringToken = match(TokenKind.TK_STRING);
-            return new LiteralExpressionSyntax(stringToken);
+
+            return new LiteralExpressionSyntax(_sTree,stringToken);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -436,7 +470,7 @@ namespace rpgc.Syntax
             expression = parceExpression();
             catchEndOfLine();
 
-            return new ExpressionStatementSyntax(expression);
+            return new ExpressionStatementSyntax(_sTree, expression);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -446,7 +480,7 @@ namespace rpgc.Syntax
 
             identifr = match(TokenKind.TK_IDENTIFIER);
 
-            return new TypeClauseSyntax(identifr);
+            return new TypeClauseSyntax(_sTree, identifr);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -456,11 +490,15 @@ namespace rpgc.Syntax
             string tagName;
 
             syntaxToken = match(TokenKind.TK_TAG);
+
             identifier = match(TokenKind.TK_IDENTIFIER);
+            if (identifier.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorStatementSyntax(_sTree);
+
             catchEndOfLine();
             tagName = identifier.sym.ToString();
 
-            return new TagStatementSyntax(syntaxToken, tagName);
+            return new TagStatementSyntax(_sTree, syntaxToken, tagName);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -472,7 +510,11 @@ namespace rpgc.Syntax
 
             ttoken = current;
             syntaxToken = match(TokenKind.TK_GOTO);
+
             identifier = match(TokenKind.TK_IDENTIFIER);
+            if (identifier.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorStatementSyntax(_sTree);
+
             catchEndOfLine();
             tagName = identifier.sym.ToString();
 
@@ -484,11 +526,13 @@ namespace rpgc.Syntax
             // tag was not found in the program
             if (x.Length == 0)
             {
-                diagnostics.reportMissingTag(ttoken.span, tagName);
-                return new GoToStatementSyntax(new SyntaxToken(TokenKind.TK_BADTOKEN, ttoken.line, ttoken.pos, ""), tagName);
+                location = new TextLocation(text, ttoken.span);
+                diagnostics.reportMissingTag(location, tagName);
+                return new ErrorStatementSyntax(_sTree);
+                //return new GoToStatementSyntax(new SyntaxToken(_sTree, TokenKind.TK_BADTOKEN, ttoken.line, ttoken.pos, ""), tagName);
             }
 
-            return new GoToStatementSyntax(syntaxToken, tagName);
+            return new GoToStatementSyntax(_sTree, syntaxToken, tagName);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -503,7 +547,7 @@ namespace rpgc.Syntax
             catchEndOfLine();
             body = parseStaement(TokenKind.TK_ENDDO);
 
-            return new UntilStatementSyntax(keyword, condition, body);
+            return new UntilStatementSyntax(_sTree, keyword, condition, body);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -521,7 +565,11 @@ namespace rpgc.Syntax
             StatementSyntax body = null;
 
             keyword = match(TokenKind.TK_FOR);
+
             identifier = match(TokenKind.TK_IDENTIFIER);
+            if (identifier.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorStatementSyntax(_sTree);
+
             equalsTok = match(TokenKind.TK_ASSIGN);
             lBound = parceExpression();
 
@@ -556,7 +604,7 @@ namespace rpgc.Syntax
             catchEndOfLine();
             body = parseStaement(TokenKind.TK_ENDFOR);
 
-            return new ForStatementSyntax(keyword, identifier, equalsTok, lBound, keywordTo, uBound, body, keywordBy, step);
+            return new ForStatementSyntax(_sTree, keyword, identifier, equalsTok, lBound, keywordTo, uBound, body, keywordBy, step);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -565,7 +613,7 @@ namespace rpgc.Syntax
             SyntaxToken keywrd;
             keywrd = match(TokenKind.TK_LEAVE);
             catchEndOfLine();
-            return new BreakStamentSyntax(keywrd);
+            return new BreakStamentSyntax(_sTree, keywrd);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -574,7 +622,7 @@ namespace rpgc.Syntax
             SyntaxToken keywrd;
             keywrd = match(TokenKind.TK_ITER);
             catchEndOfLine();
-            return new ContinueStamentSyntax(keywrd);
+            return new ContinueStamentSyntax(_sTree, keywrd);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -589,7 +637,7 @@ namespace rpgc.Syntax
             catchEndOfLine();
             body = parseStaement(TokenKind.TK_ENDDO);
 
-            return new WhileStatementSyntax(keyword, condition, body);
+            return new WhileStatementSyntax(_sTree, keyword, condition, body);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -606,7 +654,7 @@ namespace rpgc.Syntax
             statement = parseStaement(TokenKind.TK_ENDIF);
             elseClause = parseElseStaement();
 
-            return new IfStatementSyntax(keyword, condition, statement, elseClause);
+            return new IfStatementSyntax(_sTree, keyword, condition, statement, elseClause);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -622,7 +670,7 @@ namespace rpgc.Syntax
             catchEndOfLine();
             statement = parseStaement(TokenKind.TK_ENDIF);
 
-            return new ElseStatementSyntax(keyword, statement);
+            return new ElseStatementSyntax(_sTree, keyword, statement);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -640,8 +688,9 @@ namespace rpgc.Syntax
             // report EOI error
             if (tok.kind == TokenKind.TK_EOI)
             {
-                diagnostics.reportUnexpectedToken(current.span, current.kind, EndToken);
-                return new ErrorStatementSyntax();
+                location = new TextLocation(text, current.span);
+                diagnostics.reportUnexpectedToken(location, current.kind, EndToken);
+                return new ErrorStatementSyntax(_sTree);
             }
 
             // check if the next token is a end of line token
@@ -652,7 +701,7 @@ namespace rpgc.Syntax
             // consume the end of line token
             catchEndOfLine();
 
-            return new ReturnStatementSyntax(keyword, retExp);
+            return new ReturnStatementSyntax(_sTree, keyword, retExp);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -669,13 +718,13 @@ namespace rpgc.Syntax
             // identifier check
             // insert error when an error token was found
             if (identifier.kind != TokenKind.TK_IDENTIFIER)
-                return new VariableDeclarationSyntax(keyworkd, identifier, TypeSymbol.ERROR, null, null);
+                return new VariableDeclarationSyntax(_sTree, keyworkd, identifier, TypeSymbol.ERROR, null, null);
 
             initilize = parseBinaryExpresion();
             catchEndOfLine();
 
             // return new constant variable
-            return new VariableDeclarationSyntax(keyworkd, identifier, initilize);
+            return new VariableDeclarationSyntax(_sTree, keyworkd, identifier, initilize);
         }
         // /////////////////////////////////////////////////////////////////////////
         private StatementSyntax parseVariableDeclaration()
@@ -696,7 +745,7 @@ namespace rpgc.Syntax
             // identifier check
             // insert error when an error token was found
             if (identifier.kind != TokenKind.TK_IDENTIFIER)
-                return new VariableDeclarationSyntax(keyworkd, identifier, TypeSymbol.ERROR, null, null);
+                return new VariableDeclarationSyntax(_sTree, keyworkd, identifier, TypeSymbol.ERROR, null, null);
 
             // get expected type
             /*
@@ -754,7 +803,7 @@ namespace rpgc.Syntax
             catchEndOfLine();
 
             //return new VariableDeclarationSyntax(keyworkd, identifier, ts, initKeyWord, initilize);
-            return new VariableDeclarationSyntax(keyworkd, identifier, typClas, initKeyWord, initilize);
+            return new VariableDeclarationSyntax(_sTree, keyworkd, identifier, typClas, initKeyWord, initilize);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -796,7 +845,7 @@ namespace rpgc.Syntax
             if (peek(0).kind == EndToken)
                 catchEndOfLine();
 
-            return new BlockStatementSyntax(openStatementToken, statements.ToImmutable(), closeStatementToken);
+            return new BlockStatementSyntax(_sTree, openStatementToken, statements.ToImmutable(), closeStatementToken);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -849,7 +898,7 @@ namespace rpgc.Syntax
 
             statment = parseStaement();
 
-            return new GlobalStatmentSyntax(statment);
+            return new GlobalStatmentSyntax(_sTree, statment);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -869,6 +918,8 @@ namespace rpgc.Syntax
             isSub = (current.sym.ToString() == "BEGSR");
             funcDclar = match(TokenKind.TK_PROCDCL);
             identifier = match(TokenKind.TK_IDENTIFIER);
+            if (identifier.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorMemberSyntax(_sTree);
             catchEndOfLine();
 
             procToken = peek(0).kind;
@@ -881,17 +932,26 @@ namespace rpgc.Syntax
                 if (isSub == false)
                 {
                     intface = match(TokenKind.TK_PROCINFC);
+                    
                     pocInterfaceName = match(TokenKind.TK_IDENTIFIER);
+                    if (identifier.kind == TokenKind.TK_BADTOKEN)
+                        return new ErrorMemberSyntax(_sTree);
+
                     returnType = parceOptinalTypeClause();
                     catchEndOfLine();
                     parms = parseParamiterList();
+
                     endInterface = match(TokenKind.TK_ENDPI);
+                    if (endInterface.kind == TokenKind.TK_BADTOKEN)
+                        return new ErrorMemberSyntax(_sTree);
+
                     catchEndOfLine();
                 }
                 else
                 {
-                    diagnostics.reportSubroutineParamiters(current.span);
-                    return new ErrorMemberSyntax();
+                    location = new TextLocation(text, current.span);
+                    diagnostics.reportSubroutineParamiters(location);
+                    return new ErrorMemberSyntax(_sTree);
                 }
             }
 
@@ -899,7 +959,7 @@ namespace rpgc.Syntax
             // a dedicated block parcer was made because procs dont end with [END] code
             body = parseProcedureBlockStaement();
 
-            return new ProcedureDeclarationSyntax(funcDclar, identifier, intface, pocInterfaceName, returnType, parms, endInterface, body, isSub);
+            return new ProcedureDeclarationSyntax(_sTree, funcDclar, identifier, intface, pocInterfaceName, returnType, parms, endInterface, body, isSub);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -914,7 +974,7 @@ namespace rpgc.Syntax
             // get the return type
             identifier = match(TokenKind.TK_IDENTIFIER);
 
-            return new TypeClauseSyntax(identifier);
+            return new TypeClauseSyntax(_sTree, identifier);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -942,7 +1002,7 @@ namespace rpgc.Syntax
             type = parseTypeClause();
             catchEndOfLine();
 
-            return new ParamiterSyntax(identifier, type);
+            return new ParamiterSyntax(_sTree, identifier, type);
         }
 
         // /////////////////////////////////////////////////////////////////////////
@@ -956,7 +1016,7 @@ namespace rpgc.Syntax
             StatementSyntax statmt;
             TokenKind endToken;
 
-                statements = ImmutableArray.CreateBuilder<StatementSyntax>();
+            statements = ImmutableArray.CreateBuilder<StatementSyntax>();
             //openStatementToken = match(TokenKind.TK_BLOCKSTART);
             openStatementToken = null;
 
@@ -981,7 +1041,7 @@ namespace rpgc.Syntax
             closeStatementToken = match(TokenKind.TK_ENDPROC);
             catchEndOfLine();
 
-            return new BlockStatementSyntax(openStatementToken, statements.ToImmutable(), closeStatementToken);
+            return new BlockStatementSyntax(_sTree, openStatementToken, statements.ToImmutable(), closeStatementToken);
         }
 
         // ///////////////////////////////////////////////////////////////////////
@@ -994,7 +1054,7 @@ namespace rpgc.Syntax
 
             tmp = match(TokenKind.TK_EOI);
 
-            return new CompilationUnit(ret, tmp);
+            return new CompilationUnit(_sTree, ret, tmp);
         }
     }
 }

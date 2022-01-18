@@ -13,7 +13,8 @@ namespace rpgc.Syntax
         public SyntaxToken ASSIGNMENTTOKEN { get; }
         public ExpresionSyntax EXPRESSION { get; }
 
-        public AssignmentExpressionSyntax(SyntaxToken identifier, SyntaxToken assignmentSymbol, ExpresionSyntax expression)
+        public AssignmentExpressionSyntax(SyntaxTree stree,SyntaxToken identifier, SyntaxToken assignmentSymbol, ExpresionSyntax expression)
+            :base(stree)
         {
             IDENTIFIERTOKEN = identifier;
             ASSIGNMENTTOKEN = assignmentSymbol;

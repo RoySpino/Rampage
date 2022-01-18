@@ -14,12 +14,12 @@ namespace rpgc.Syntax
         public ImmutableArray<StatementSyntax> Statements { get; }
         public SyntaxToken BlockEndToken { get; }
 
-        public BlockStatementSyntax(SyntaxToken blockStartToken, ImmutableArray<StatementSyntax> statements, SyntaxToken blockEndToken)
+        public BlockStatementSyntax(SyntaxTree stree, SyntaxToken blockStartToken, ImmutableArray<StatementSyntax> statements, SyntaxToken blockEndToken)
+            : base(stree)
         {
             BlockStartToken = blockStartToken;
             Statements = statements;
             BlockEndToken = blockEndToken;
         }
-
     }
 }

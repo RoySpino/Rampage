@@ -114,14 +114,20 @@ namespace rpgc.IO
         public static void WriteDiagnostics(this TextWriter writer, IEnumerable<Diagnostics> diagnostics)
         {
             ConsoleColor messageColor;
+            string location;
 
 
             Console.ResetColor();
-            foreach (Diagnostics _diagnostic in diagnostics)
+            
+            foreach (Diagnostics _diagnostic in diagnostics.OrderBy(da => da.Location.TEXT.FileName)
+                                                            .ThenBy(db => db.SPAN.LineNo)
+                                                            .ThenBy(dc => dc.SPAN.LinePos)
+                                                            .ThenBy(dd => dd.IsWarning))
             {
+                location = _diagnostic.Location.TEXT.FileName;
                 messageColor = _diagnostic.IsWarning ? ConsoleColor.DarkYellow : ConsoleColor.DarkRed;
                 writer.setForeground(messageColor);
-                writer.WriteLine(_diagnostic.ToString());
+                writer.WriteLine($"{location} {_diagnostic}");
                 Console.ResetColor();
             }
         }

@@ -12,7 +12,8 @@ namespace rpgc.Syntax
         public SyntaxToken ReturnKeyword { get; }
         public ExpresionSyntax Expression { get; }
 
-        public ReturnStatementSyntax(SyntaxToken return_KeyWord, ExpresionSyntax returnExp = null)
+        public ReturnStatementSyntax(SyntaxTree stree, SyntaxToken return_KeyWord, ExpresionSyntax returnExp = null)
+            :base(stree)
         {
             ReturnKeyword = return_KeyWord;
             Expression = returnExp;

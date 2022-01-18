@@ -13,12 +13,12 @@ namespace rpgc.Syntax
         public int pos { get; }
         public object sym { get; }
         public override TextSpan span => new TextSpan(pos, (sym?.ToString().Length ?? 0), line, linePosition);
-        //internal bool isMissing => (sym == null);
         public string special;
         public int linePosition;
 
 
-        public SyntaxToken(TokenKind k, int l, int p, object s, int linPos = 0)
+        public SyntaxToken(SyntaxTree sTree,TokenKind k, int l, int p, object s, int linPos = 0)
+            :base(sTree)
         {
             kind = k;
             line = l;
@@ -28,7 +28,8 @@ namespace rpgc.Syntax
         }
         
         // ////////////////////////////////////////////////////////
-        public SyntaxToken(TokenKind k, int l, int p, object s, string specl, int linPos=0)
+        public SyntaxToken(SyntaxTree sTree, TokenKind k, int l, int p, object s, string specl, int linPos=0)
+            : base(sTree)
         {
             kind = k;
             line = l;

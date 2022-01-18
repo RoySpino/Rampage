@@ -10,7 +10,7 @@ namespace rpgc.Syntax
     {
         public override TokenKind kind => TokenKind.TK_BADTOKEN;
 
-        public ErrorMemberSyntax()
+        public ErrorMemberSyntax(SyntaxTree st) : base(st)
         {
             //
         }

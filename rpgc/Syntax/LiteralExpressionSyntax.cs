@@ -12,12 +12,13 @@ namespace rpgc.Syntax
         public SyntaxToken LiteralToken { get; }
         public object value { get; }
 
-        public LiteralExpressionSyntax(SyntaxToken token) : this(token, token.sym)
+        public LiteralExpressionSyntax(SyntaxTree stree,SyntaxToken token) : this(stree ,token, token.sym)
         {
         }
 
         // /////////////////////////////////////////////////////////////////////////
-        public LiteralExpressionSyntax(SyntaxToken token, object Value)
+        public LiteralExpressionSyntax(SyntaxTree stree, SyntaxToken token, object Value)
+            :base(stree)
         {
             LiteralToken = token;
 

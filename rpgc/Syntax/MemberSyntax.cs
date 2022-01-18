@@ -8,5 +8,7 @@ namespace rpgc.Syntax
 {
     public abstract class MemberSyntax : SyntaxNode
     {
+        public MemberSyntax(SyntaxTree st): base(st)
+        { }
     }
 }

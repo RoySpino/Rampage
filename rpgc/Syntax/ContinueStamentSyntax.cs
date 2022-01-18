@@ -5,7 +5,8 @@
         public override TokenKind kind => TokenKind.TK_ITER;
         public SyntaxToken keyword { get; }
 
-        public ContinueStamentSyntax(SyntaxToken keywrd)
+        public ContinueStamentSyntax(SyntaxTree stree, SyntaxToken keywrd)
+            : base(stree)
         {
             keyword = keywrd;
         }

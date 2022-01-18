@@ -17,7 +17,8 @@ namespace rpgc.Syntax
         public SyntaxToken CloseParen { get; }
         public bool isExsrCall { get; }
 
-        public CallExpressionSyntax(SyntaxToken functionName, SyntaxToken openParen, SeperatedSyntaxList<ExpresionSyntax> args, SyntaxToken closeParen, bool onExsrCall = false)
+        public CallExpressionSyntax(SyntaxTree stree, SyntaxToken functionName, SyntaxToken openParen, SeperatedSyntaxList<ExpresionSyntax> args, SyntaxToken closeParen, bool onExsrCall = false)
+            : base(stree)
         {
             FunctionName = functionName;
             Arguments = args;
@@ -25,7 +26,6 @@ namespace rpgc.Syntax
             CloseParen = closeParen;
             isExsrCall = onExsrCall;
         }
-
     }
 
 

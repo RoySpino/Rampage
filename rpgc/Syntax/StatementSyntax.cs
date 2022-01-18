@@ -8,7 +8,8 @@ namespace rpgc.Syntax
 {
     public abstract class StatementSyntax :SyntaxNode
     {
-        public StatementSyntax()
+        public StatementSyntax(SyntaxTree stree)
+            : base(stree)
         {
             //
         }
