@@ -53,16 +53,35 @@ namespace rpgc
         // ////////////////////////////////////////////////////////////////////////////////////
         private static void doCompile(string[] paths)
         {
-            string text, fnam;
+            string text, fnam, prv, tmp;
             Complation _compilation;
-            SyntaxTree st;
             EvaluationResult res;
             List<SyntaxTree> sTrees;
+            List<string> lpths, warnDocs;
 
             sTrees = new List<SyntaxTree>();
+            warnDocs = new List<string>();
+            lpths = new List<string>(paths);
+            lpths.Sort();
+            prv = "";
 
-            foreach (string path in paths)
+            foreach (string path in lpths)
             {
+                if (prv == path)
+                {
+                    fnam = $"warning: Source file `{Path.GetFileName(path)}' specified multiple times";
+                    tmp = (from wd in warnDocs
+                           where wd == fnam
+                           select wd).FirstOrDefault();
+                    if (tmp == null)
+                        warnDocs.Add(fnam);
+
+                    continue;
+                }
+
+                prv = path;
+                
+
                 if (File.Exists(path))
                 {
                     text = File.ReadAllText(path);
@@ -80,6 +99,15 @@ namespace rpgc
                     sTrees = null;
                     return;
                 }
+            }
+
+            // display warning message that user enterd multiple documents
+            if (warnDocs.Any() == true)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                foreach(string itm in warnDocs)
+                    Console.WriteLine(itm);
+                Console.ResetColor();
             }
 
             _compilation = new Complation(sTrees.ToArray());
