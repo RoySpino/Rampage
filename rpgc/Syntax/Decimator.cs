@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -79,7 +79,7 @@ namespace rpgc.Syntax
         private static SourceText source;
         private static TextLocation location;
         private static bool isInFreeTag;
-
+        private static bool inDecareBlock;
 
         private static bool isGoodSpec(char spec, int line)
         {
@@ -797,7 +797,7 @@ namespace rpgc.Syntax
             setLineType(symbol);
 
             // assign keyword token
-            kind = SyntaxFacts.getKeywordKind(symbol);
+            kind = SyntaxFacts.getFreeFormatKind(symbol);
 
             // chech if symbol is a valid variabel name
             if (kind == TokenKind.TK_IDENTIFIER)
@@ -1276,6 +1276,43 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////
+        // use global varialbe to assign ending type
+        // this returns a value other than space on when DBlockType changes
+        private static List<SyntaxToken> getEndInterfaceOrPrototype()
+        {
+            TokenKind tk;
+            List<SyntaxToken> rarr = new List<SyntaxToken>();
+
+            switch (DBlockType)
+            {
+                case "pi":
+                    tk = TokenKind.TK_ENDPI;
+                    break;
+                case "pr":
+                    tk = TokenKind.TK_ENDPR;
+                    break;
+                case "ds":
+                    tk = TokenKind.TK_ENDDS;
+                    break;
+                default:
+                    tk = TokenKind.TK_SPACE;
+                    break;
+            }
+
+            if (tk == TokenKind.TK_SPACE)
+            {
+                rarr.Add(new SyntaxToken(sTree_, tk, linePos, 1, "", 0));
+            }
+            else
+            {
+                rarr.Add(new SyntaxToken(sTree_, tk, linePos, 1, "", 0));
+                rarr.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, 0, 0, "", 0));
+            }
+
+            return rarr;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////
         public static List<SyntaxToken> doDecimation3(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
         {
             bool hasEndToken, doFreeBlock = false;
@@ -1364,6 +1401,12 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, linePos, 0, "", 1));
                         break;
                     case 'C':
+                        if (inDecareBlock == true)
+                        {
+                            ret.AddRange(getEndInterfaceOrPrototype());
+                            inDecareBlock = false;
+                            DBlockType = null;
+                        }
                         lst = decimateCSpec(lineNo, tmp);
 
                         // peek ahead
@@ -1636,7 +1679,7 @@ namespace rpgc.Syntax
                             ret.AddRange(doLex(RESULT));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ASSIGN, RESULT.linePos, (RESULT.chrPos), OpCode, RESULT.chrPos));
                             ret.AddRange(doLex(RESULT));
-                            ret.AddRange(doLex(OP));
+                            ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                             ret.AddRange(doLex(FAC2));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         }
@@ -1646,7 +1689,7 @@ namespace rpgc.Syntax
                             ret.AddRange(doLex(RESULT));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ASSIGN, RESULT.linePos, (RESULT.chrPos), OpCode, RESULT.chrPos));
                             ret.AddRange(doLex(FAC1));
-                            ret.AddRange(doLex(OP));
+                            ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                             ret.AddRange(doLex(FAC2));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
 
@@ -1728,7 +1771,7 @@ namespace rpgc.Syntax
                     case "DOUNE":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOU, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.AddRange(doLex(OP));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
@@ -1760,7 +1803,7 @@ namespace rpgc.Syntax
                     case "DOWNE":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOW, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.AddRange(doLex(OP));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
@@ -1810,7 +1853,7 @@ namespace rpgc.Syntax
                     case "IFNE":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IF, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.AddRange(doLex(OP));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "IF", OP.chrPos));
@@ -1890,7 +1933,7 @@ namespace rpgc.Syntax
                         onEvalLine = true;
                         if (FAC1.symbol != "")
                         {
-                            // somthing was entered in factor
+                            // somthing was entered in factor 1
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", FAC1.chrPos));
                             location = new TextLocation(source, new TextSpan(FAC1.chrPos, FAC1.symbol.Length));
                             diagnostics.reportBadFactor(location, 1, FAC1.chrPos);
@@ -2009,19 +2052,25 @@ namespace rpgc.Syntax
             TokenKind tk;
 
             dclType = lst[3].symbol;
+            inDecareBlock = true;
 
             switch (dclType)
             {
                 case "C":
+                    ret.AddRange(getEndInterfaceOrPrototype());
+                    DBlockType = null;
+                    inDecareBlock = false;
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_VARDCONST, (lst[0].linePos), 1, "C", lst[3].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), lst[0].symbol, lst[0].chrPos));
                     //ret.Add(new SyntaxToken(SyntaxFacts.getRPGType(lst[6].symbol), (lst[6].linePos), lst[6].chrPos, lst[6].symbol, lst[6].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
                     break;
                 case "DS":
-                    DBlockType = "pr";
+                    ret.AddRange(getEndInterfaceOrPrototype());
+                    DBlockType = "ds";
                     break;
                 case "PI":
+                    ret.AddRange(getEndInterfaceOrPrototype());
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_PROCINFC, (lst[0].linePos), 1, "Pi", lst[3].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), "*n", lst[1].chrPos));
                     if (lst.Count > 4)
@@ -2030,8 +2079,13 @@ namespace rpgc.Syntax
                     DBlockType = "pi";
                     break;
                 case "PR":
+                    ret.AddRange(getEndInterfaceOrPrototype());
+                    DBlockType = "pr";
                     break;
                 case "S":
+                    ret.AddRange(getEndInterfaceOrPrototype());
+                    DBlockType = null;
+                    inDecareBlock = false;
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_VARDECLR, (lst[0].linePos), 1, "S", lst[3].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
@@ -2039,26 +2093,13 @@ namespace rpgc.Syntax
                     break;
                 default:
                     // PR and PI block paramiters
-                    // remove end index and its new line
-                    if (PrPi_Idx > 0 && ret != null && ret.Count > (PrPi_Idx + 1))
-                    {
-                        ret.RemoveAt(PrPi_Idx);
-                        ret.RemoveAt(PrPi_Idx + 1);
-                    }
-
                     // add paramiter
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
 
-                    // add end index and save its position
-                    tk = (DBlockType == "pi") ? TokenKind.TK_ENDPI : TokenKind.TK_ENDPR;
-                    ret.Add(new SyntaxToken(sTree_, tk, (lst[0].linePos), 1, "", lst[0].chrPos));
-                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
-                    PrPi_Idx = (ret.Count - 1);
                     break;
             }
-
 
             return ret;
         }
