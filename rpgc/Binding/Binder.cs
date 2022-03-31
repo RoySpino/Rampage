@@ -869,7 +869,9 @@ namespace rpgc.Binding
                 return new BoundErrorExpression();
             }
 
-            if (_variable.IsReadOnly == true)
+            // check if varialbe is read only
+            // do not do for PI, DS or PR blocks
+            if (_variable.IsReadOnly == true && _variable.kind != SymbolKind.SYM_PARAMITER)
             {
                 diagnostics.reportAssignmentOfConstantVar(syntax.IDENTIFIERTOKEN.Location(), name);
                 return new BoundErrorExpression();
