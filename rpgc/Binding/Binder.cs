@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections.Immutable;
@@ -656,7 +656,6 @@ namespace rpgc.Binding
             isCountUp = (syntax.Keyword_By.kind == TokenKind.TK_TO);
 
             // variable must be declared before the for loop is used
-
             if (scope.checkLocalVariables(name) == false)
             {
                 diagnostics.reportVariableDoesNotExist(syntax.Identifier.Location(), name);
@@ -871,7 +870,7 @@ namespace rpgc.Binding
 
             // check if varialbe is read only
             // do not do for PI, DS or PR blocks
-            if (_variable.IsReadOnly == true && _variable.kind != SymbolKind.SYM_PARAMITER)
+            if (_variable.IsReadOnly == true &&  _variable.kind != SymbolKind.SYM_PARAMITER)
             {
                 diagnostics.reportAssignmentOfConstantVar(syntax.IDENTIFIERTOKEN.Location(), name);
                 return new BoundErrorExpression();
