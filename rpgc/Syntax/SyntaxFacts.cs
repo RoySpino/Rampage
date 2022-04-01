@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,17 +24,17 @@ namespace rpgc.Syntax
                                 "SETGT","SETLL","SETOFF","SETON","SHTDN","SORTA","SPACE","SQRT","SUB","SUBDUR","SUBST","TAG","TEST",
                                 "TESTB","TESTN","TESTZ","TIME","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE","XFOOT","XLATE",
                                 "Z-ADD","Z-SUB"};
-        private static string[] freeKeyWords = {"ACQ","ADDDUR","ALLOC","AND","ASSIGN","BEGSR",
+        private static string[] freeKeyWords = {"ACQ","ALLOC","AND","ASSIGN","BEGSR","BY",
                                 "CIN","CHAIN","CLEAR",
                                 "CLOSE","COMMIT", "COUT","DCL-C","DCL-S","DEALLOC","DEFINE","DELETE",
                                 "DOU","DOW","DSPLY","DUMP","ELSE","END","ENDCS","ENDDO","ENDFOR",
                                 "ENDIF","ENDMON","ENDSL","ENDSR","EXCEPT","EXFMT","EXSR",
                                 "EXTRCT","FEOD","FOR","FORCE","IF","IN","ITER","LEAVE",
                                 "LEAVESR","LITEXPR","MHHZO","MONITOR",
-                                "MULT","NOT","OCCUR","OPEN","OR",
+                                "NOT","OCCUR","OPEN","OR","TO",
                                 "OTHER","OUT","POST","PRINT","READ","READC",
                                 "READE","READP","READPE","REALLOC","REL","RESET","RETURN","ROLBK","SCAN",
-                                "SELECT","SEMI","SETGT","SETLL","SHTDN","SORTA",
+                                "SELECT","SETGT","SETLL","SHTDN","SORTA",
                                 "SUBST","TEST",
                                 "UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE"};
         private static string[] freeBIFWithNoParan = { "DSPLY", "SORTA", "COUT", "EXSR", "READ", "READE", "SETLL", "SETGT", "OPEN", "CLOSE", "READC", "DELETE", "WRITE", "UPDATE", "CHAIN", "CLEAR", "SORTA", "SUBDUR" };
@@ -409,6 +409,14 @@ namespace rpgc.Syntax
 
             // if found return true
             return (ishere != null);
+        }
+
+        public static TokenKind getFreeFormatKind(string kw)
+        {
+            if (isKeyword(kw) == true)
+                return getKeywordKind(kw);
+
+            return TokenKind.TK_IDENTIFIER;
         }
 
         // //////////////////////////////////////////////////////////////////////////////////
