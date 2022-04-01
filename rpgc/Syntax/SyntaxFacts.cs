@@ -25,18 +25,15 @@ namespace rpgc.Syntax
                                 "TESTB","TESTN","TESTZ","TIME","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE","XFOOT","XLATE",
                                 "Z-ADD","Z-SUB"};
         private static string[] freeKeyWords = {"ACQ","ALLOC","AND","ASSIGN","BEGSR","BY",
-                                "CIN","CHAIN","CLEAR",
+                                "CIN","CHAIN","CLEAR","INZ","SUBST","TEST",
                                 "CLOSE","COMMIT", "COUT","DCL-C","DCL-S","DEALLOC","DEFINE","DELETE",
                                 "DOU","DOW","DSPLY","DUMP","ELSE","END","ENDCS","ENDDO","ENDFOR",
-                                "ENDIF","ENDMON","ENDSL","ENDSR","EXCEPT","EXFMT","EXSR",
-                                "EXTRCT","FEOD","FOR","FORCE","IF","IN","ITER","LEAVE",
-                                "LEAVESR","LITEXPR","MHHZO","MONITOR",
-                                "NOT","OCCUR","OPEN","OR","TO",
-                                "OTHER","OUT","POST","PRINT","READ","READC",
-                                "READE","READP","READPE","REALLOC","REL","RESET","RETURN","ROLBK","SCAN",
-                                "SELECT","SETGT","SETLL","SHTDN","SORTA",
-                                "SUBST","TEST",
-                                "UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE"};
+                                "ENDIF","ENDMON","ENDSL","ENDSR","EXCEPT","EXFMT","EXSR","OUT",
+                                "EXTRCT","FEOD","FOR","FORCE","IF","IN","ITER","LEAVE","LEAVESR",
+                                "LITEXPR","MHHZO","MONITOR","NOT","OCCUR","OPEN","OR","TO","OTHER",
+                                "POST","PRINT","READ","READC","READE","READP","READPE","REALLOC",
+                                "REL","RESET","RETURN","ROLBK","SCAN","SELECT","SETGT","SETLL",
+                                "SHTDN","SORTA","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE"};
         private static string[] freeBIFWithNoParan = { "DSPLY", "SORTA", "COUT", "EXSR", "READ", "READE", "SETLL", "SETGT", "OPEN", "CLOSE", "READC", "DELETE", "WRITE", "UPDATE", "CHAIN", "CLEAR", "SORTA", "SUBDUR" };
         private static string[] BIIndicators = { "01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"
                                                 ,"31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60"
