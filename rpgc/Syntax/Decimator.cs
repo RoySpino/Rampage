@@ -2089,6 +2089,10 @@ namespace rpgc.Syntax
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_VARDECLR, (lst[0].linePos), 1, "S", lst[3].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
+                    
+                    // add initilizer or other keyword
+                    if (lst.Count > 8)
+                        ret.AddRange(doLex(lst[8]));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
                     break;
                 default:
