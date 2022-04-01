@@ -26,14 +26,17 @@ namespace rpgc.Syntax
                                 "Z-ADD","Z-SUB"};
         private static string[] freeKeyWords = {"ACQ","ALLOC","AND","ASSIGN","BEGSR","BY",
                                 "CIN","CHAIN","CLEAR","INZ","SUBST","TEST",
-                                "CLOSE","COMMIT", "COUT","DCL-C","DCL-S","DEALLOC","DEFINE","DELETE",
+                                "CLOSE","COMMIT", "COUT","DEALLOC","DEFINE","DELETE",
                                 "DOU","DOW","DSPLY","DUMP","ELSE","END","ENDCS","ENDDO","ENDFOR",
                                 "ENDIF","ENDMON","ENDSL","ENDSR","EXCEPT","EXFMT","EXSR","OUT",
                                 "EXTRCT","FEOD","FOR","FORCE","IF","IN","ITER","LEAVE","LEAVESR",
-                                "LITEXPR","MHHZO","MONITOR","NOT","OCCUR","OPEN","OR","TO","OTHER",
+                                "MONITOR","NOT","OCCUR","OPEN","OR","TO","OTHER",
                                 "POST","PRINT","READ","READC","READE","READP","READPE","REALLOC",
                                 "REL","RESET","RETURN","ROLBK","SCAN","SELECT","SETGT","SETLL",
                                 "SHTDN","SORTA","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE"};
+        private static string[] freeDecalres = { "DCL-C", "DCL-S", "DCL-PROC", "DCL-PI", "DCL-DS",
+                                "DCL-PR", "CTL-OPT","END-PROC", "END-PI", "END-PR", "END-DS","ON-ERROR"};
+
         private static string[] freeBIFWithNoParan = { "DSPLY", "SORTA", "COUT", "EXSR", "READ", "READE", "SETLL", "SETGT", "OPEN", "CLOSE", "READC", "DELETE", "WRITE", "UPDATE", "CHAIN", "CLEAR", "SORTA", "SUBDUR" };
         private static string[] BIIndicators = { "01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"
                                                 ,"31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60"
@@ -41,6 +44,7 @@ namespace rpgc.Syntax
                                                 ,"91","92","93","94","95","96","97","98","99","LR","H1","H2","H3","H4","H5","H6","H7","H8","H9","KA","KB","KC","KD","KE","KF","KG","KH","KI","KJ","KK"
                                                 ,"KL","KM","KN","KO","KP","KQ","KR","KS","KT","KU","KV","KW","KX","L0","L1","L2","L3","L4","L5","L6","L7","L8","L9","M1","M2","M3","M4","M5","M6","M7"
                                                 ,"M8","M9","MR","OA","OG","OV","RT"};
+        private static string[] allFreeKeywords = null;
 
         public static bool isCharLiteralOrControl(char chr)
         {
@@ -408,12 +412,29 @@ namespace rpgc.Syntax
             return (ishere != null);
         }
 
-        public static TokenKind getFreeFormatKind(string kw)
+        public static TokenKind getFreeFormatKind(string kw, bool onFree = false)
         {
-            if (isKeyword(kw) == true)
-                return getKeywordKind(kw);
+            string kwl;
 
-            return TokenKind.TK_IDENTIFIER;
+            if (isKeyword(kw) == true && onFree == false)
+                return getKeywordKind(kw);
+            else
+            {
+                if (allFreeKeywords == null)
+                {
+                    allFreeKeywords = new string[freeKeyWords.Length];
+                    freeKeyWords.CopyTo(allFreeKeywords, 0);
+                    allFreeKeywords = allFreeKeywords.Concat(freeDecalres).ToArray();
+                }
+                kwl = (from itm in allFreeKeywords
+                       where itm == kw
+                       select itm).FirstOrDefault();
+
+                if (kwl == null)
+                    return TokenKind.TK_IDENTIFIER;
+
+                return getKeywordKind(kwl);
+            }
         }
 
         // //////////////////////////////////////////////////////////////////////////////////
