@@ -1,4 +1,4 @@
-﻿using rpgc.Syntax;
+using rpgc.Syntax;
 using rpgc.Text;
 using rpgc.Symbols;
 using System;
@@ -675,7 +675,7 @@ namespace rpgc.Syntax
             setLineType(symbol);
 
             // assign keyword token
-            kind = SyntaxFacts.getKeywordKind(symbol);
+            kind = SyntaxFacts.getFreeFormatKind(symbol, true);
 
             // check if symbol is a function name or identifier
             if (kind == TokenKind.TK_IDENTIFIER)
