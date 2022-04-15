@@ -1,5 +1,5 @@
 # Ramage
-C# version of my RPG4 compiler
+You cant spell rampage without RPG.
 
 This project was developed so that RPG development could be handled on other platforms other than IBMi. 
 
