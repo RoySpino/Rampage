@@ -15,7 +15,7 @@ To make the development simpler there is no distinction between procedures that 
 Current specs that are implanted are D, C and P specs
 
 ## TODO
-Because here is no in-built database, this compiler will rely on an external database. Database assignment and connection will be handled within the H spec.
+Because there is no in-built database, this compiler will rely on an external database. Database assignment and connection will be handled within the H spec.
 
 Add data-structures currently only standalone variable are supported.
 
