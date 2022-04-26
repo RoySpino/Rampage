@@ -1,7 +1,7 @@
 # Rampage
 You cant spell rampage without RPG.
 
-This project was developed so that RPG development could be handled on other platforms other than IBMi. 
+This project was developed so that RPG development could be handled on a platform other than IBMi. 
 
 # Things to know
 This project is still in the interpreter phase.
