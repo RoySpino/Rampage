@@ -25,6 +25,8 @@ namespace rpgc.Symbols
         public static readonly FunctionSymbol BIF_Rand = new FunctionSymbol("%RAND", ImmutableArray.Create(new ParamiterSymbol("Max", TypeSymbol.Integer)), TypeSymbol.Integer);
         public static readonly FunctionSymbol BIF_Subst = new FunctionSymbol("%SUBST", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char), new ParamiterSymbol("B", TypeSymbol.Integer), new ParamiterSymbol("C", TypeSymbol.Integer)), TypeSymbol.Char);
         public static readonly FunctionSymbol BIF_div = new FunctionSymbol("%DIV", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer),new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Scan = new FunctionSymbol("%SCAN", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char), new ParamiterSymbol("B", TypeSymbol.Char)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Replace = new FunctionSymbol("%REPLACE", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char), new ParamiterSymbol("B", TypeSymbol.Char), new ParamiterSymbol("C", TypeSymbol.Integer), new ParamiterSymbol("D", TypeSymbol.Integer)), TypeSymbol.Char);
 
         internal static IEnumerable<FunctionSymbol> getAll()
         {

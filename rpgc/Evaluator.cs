@@ -358,6 +358,29 @@ namespace rpgc
 
                 return (int)(Val0 / Val1);
             }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Scan)
+            {
+                string whatToFind = evaluateExpression((node.Arguments[0])).ToString();
+                string source = evaluateExpression((node.Arguments[1])).ToString();
+
+                return source.IndexOf(whatToFind);
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Replace)
+            {
+                string wrdValue = evaluateExpression((node.Arguments[0])).ToString();
+                string source = evaluateExpression((node.Arguments[1])).ToString();
+                int startIndex = Convert.ToInt32(evaluateExpression((node.Arguments[2])));
+                int length = Convert.ToInt32(evaluateExpression((node.Arguments[3])));
+                string tmp;
+
+                tmp = wrdValue.Substring(0, length);
+
+                if ((startIndex + length) >= source.Length)
+                    return (source.Substring(0, startIndex-1) + tmp);
+
+                tmp = source.Substring(0, startIndex - 1) + tmp + source.Substring((startIndex + length - 1));
+                return tmp;
+            }
             else
             {
                 // handle programmer defigned procedures/subrutines
