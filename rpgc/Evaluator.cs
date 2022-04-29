@@ -338,7 +338,14 @@ namespace rpgc
                 string Val0 = evaluateExpression((node.Arguments[0])).ToString();
                 string Val1 = evaluateExpression((node.Arguments[1])).ToString();
                 string Val2 = evaluateExpression((node.Arguments[2])).ToString();
-                return Val0.Substring(Convert.ToInt32(Val1), Convert.ToInt32(Val2));
+                string result;
+                int sidx, len;
+
+                sidx = Convert.ToInt32(Val1);
+                len = Convert.ToInt32(Val2);
+                result = Val0.Substring(sidx, len);
+
+                return result;
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rand)
             {
@@ -362,8 +369,11 @@ namespace rpgc
             {
                 string whatToFind = evaluateExpression((node.Arguments[0])).ToString();
                 string source = evaluateExpression((node.Arguments[1])).ToString();
+                int idx;
 
-                return source.IndexOf(whatToFind);
+                idx = source.IndexOf(whatToFind) + 1;
+
+                return idx;
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Replace)
             {
@@ -380,6 +390,13 @@ namespace rpgc
 
                 tmp = source.Substring(0, startIndex - 1) + tmp + source.Substring((startIndex + length - 1));
                 return tmp;
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Trim)
+            {
+                string value = evaluateExpression((node.Arguments[0])).ToString();
+
+                value = value.Trim();
+                return value;
             }
             else
             {

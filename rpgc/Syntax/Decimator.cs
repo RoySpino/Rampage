@@ -8,53 +8,6 @@ using rpgc.Text;
 
 namespace rpgc.Syntax
 {
-    public class StructNode
-    {
-        public int linePos;
-        public int chrPos;
-        public string symbol;
-        public int factor;
-
-        public StructNode(int l, int ch, string sym)
-        {
-            linePos = l;
-            chrPos = (l + ch);
-            symbol = sym;
-            factor = 0;
-        }
-
-        public bool isLeftJustified()
-        {
-            return (symbol[0] == 32);
-        }
-
-        public bool isRightJustified()
-        {
-            int endIdx;
-
-            endIdx = symbol.Length - 1;
-
-            return (symbol[endIdx] == 32);
-        }
-    }
-
-    public class StructCard
-    {
-        public int LinePos;
-        public int LineSiz;
-        public string Line;
-
-        public StructCard(string l, int lPos)
-        {
-            Line = l;
-            LinePos = lPos;
-            LineSiz = l.Length;
-        }
-    }
-
-    // ////////////////////////////////////////////////////////////////////////////
-    // /////     /////     /////     /////     /////     /////     /////     /////
-    // //////////////////////////////////////////////////////////////////////////
     public static class Decimator
     {
         static char specChkStr = 'H';
@@ -889,8 +842,9 @@ namespace rpgc.Syntax
                 nextChar();
             }
 
-            Value = symbol.Trim().ToUpper();
-            kind = SyntaxFacts.getBuiltInFunction(Value.ToString());
+            symbol = symbol.Trim().ToUpper();
+            Value = symbol;
+            kind = SyntaxFacts.getBuiltInFunction(symbol);
 
             return symbol;
         }
@@ -1906,6 +1860,13 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, OP.chrPos, "", OP.chrPos));
                         lineType = "";
                         break;
+                    case "SCAN":
+                        ret.AddRange(doLex(RESULT));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "=", OP.chrPos));
+                        snode = new StructNode(0, 0, $"%SCAN({FAC1.symbol}:{FAC2.symbol})");
+                        ret.AddRange(doLex(snode));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        break;
                     case "ORGE":
                     case "ORGT":
                     case "ORLE":
@@ -2106,6 +2067,56 @@ namespace rpgc.Syntax
             }
 
             return ret;
+        }
+    }
+
+    // ////////////////////////////////////////////////////////////////////////////
+    // /////     /////     /////     /////     /////     /////     /////     /////
+    // //////////////////////////////////////////////////////////////////////////
+
+
+
+    public class StructNode
+    {
+        public int linePos;
+        public int chrPos;
+        public string symbol;
+        public int factor;
+
+        public StructNode(int l, int ch, string sym)
+        {
+            linePos = l;
+            chrPos = (l + ch);
+            symbol = sym;
+            factor = 0;
+        }
+
+        public bool isLeftJustified()
+        {
+            return (symbol[0] == 32);
+        }
+
+        public bool isRightJustified()
+        {
+            int endIdx;
+
+            endIdx = symbol.Length - 1;
+
+            return (symbol[endIdx] == 32);
+        }
+    }
+
+    public class StructCard
+    {
+        public int LinePos;
+        public int LineSiz;
+        public string Line;
+
+        public StructCard(string l, int lPos)
+        {
+            Line = l;
+            LinePos = lPos;
+            LineSiz = l.Length;
         }
     }
 }

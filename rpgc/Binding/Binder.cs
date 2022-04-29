@@ -448,6 +448,8 @@ namespace rpgc.Binding
             // setup function call properties
             a1 = (syntax.Arguments.Count() == 1);
             a2 = (lookupType(syntax.FunctionName.sym.ToString()));
+
+
             name = syntax.FunctionName.sym.ToString();
             boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
 

@@ -18,12 +18,16 @@ namespace rpgc
             Complation _compilation;
             SyntaxTree st;
             EvaluationResult res;
-            List<SyntaxTree> trees;
 
             if (args.Length == 0)
             {
+                
                 RpgRepl rpl = new RpgRepl();
                 rpl.run();
+                /*
+                string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\test4.rpg"};
+                doCompile(ar);
+                */
             }
             else
             {
