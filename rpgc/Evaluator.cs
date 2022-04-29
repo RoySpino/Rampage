@@ -330,18 +330,13 @@ namespace rpgc
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Subst)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
-                return Val.ToUpper();
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Subst)
-            {
                 string Val0 = evaluateExpression((node.Arguments[0])).ToString();
                 string Val1 = evaluateExpression((node.Arguments[1])).ToString();
                 string Val2 = evaluateExpression((node.Arguments[2])).ToString();
                 string result;
                 int sidx, len;
 
-                sidx = Convert.ToInt32(Val1);
+                sidx = Convert.ToInt32(Val1) - 1;
                 len = Convert.ToInt32(Val2);
                 result = Val0.Substring(sidx, len);
 

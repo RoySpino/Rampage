@@ -21,11 +21,14 @@ namespace rpgc
 
             if (args.Length == 0)
             {
-                
+                /*
+                */
                 RpgRepl rpl = new RpgRepl();
                 rpl.run();
+
                 /*
-                string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\test4.rpg"};
+                //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\test4.rpg"};
+                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\test4.rpg"};
                 doCompile(ar);
                 */
             }
