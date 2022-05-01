@@ -240,6 +240,7 @@ namespace rpgc.Binding
                 BasicBlock toBlock, thenBlock, next, elseBlock, current;
                 BoundGoToConditionalStatement cgs;
                 BoundExpression negatedCondition, thenCondition, elseCondition;
+                bool isLastStatementInBlock;
 
                 if (!blocks.Any())
                     Connect(_start, _end);
@@ -265,7 +266,8 @@ namespace rpgc.Binding
 
                     foreach (var statement in current.Statements)
                     {
-                        var isLastStatementInBlock = statement == current.Statements.Last();
+                        isLastStatementInBlock = (statement == current.Statements.Last());
+
                         switch (statement.tok)
                         {
                             case BoundNodeToken.BNT_GOTO:
@@ -289,9 +291,11 @@ namespace rpgc.Binding
                             case BoundNodeToken.BNT_VARDECLR:
                             case BoundNodeToken.BNT_LABEL:
                             case BoundNodeToken.BNT_EXPRSTMT:
-                            //case BoundNodeToken.BNT_ERROREXP:
                                 if (isLastStatementInBlock)
                                     Connect(current, next);
+                                break;
+                            case BoundNodeToken.BNT_ERROREXP:
+                                Connect(current, _end);
                                 break;
                             default:
                                 throw new Exception($"Unexpected statement: {statement.tok}");

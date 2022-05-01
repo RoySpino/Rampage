@@ -23,7 +23,7 @@ namespace rpgc.Syntax
         // ///////////////////////////////////////////////////////////////////
         public T getParamiterAt(int idx)
         {
-            return (T)SeperatorsAndNodes[idx * 2];
+            return (T)SeperatorsAndNodes[idx];
         }
 
         // ///////////////////////////////////////////////////////////////////

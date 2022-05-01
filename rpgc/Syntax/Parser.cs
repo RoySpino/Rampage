@@ -980,7 +980,7 @@ namespace rpgc.Syntax
         // ///////////////////////////////////////////////////////////////////////
         private SeperatedParamiterList<ParamiterSyntax> parseParamiterList()
         {
-            ParamiterSyntax prm;
+            ParamiterSyntax prm, seperator;
             ImmutableArray<SyntaxNode>.Builder nodes = ImmutableArray.CreateBuilder<SyntaxNode>();
 
             while (current.kind != TokenKind.TK_ENDPI && current.kind != TokenKind.TK_EOI)

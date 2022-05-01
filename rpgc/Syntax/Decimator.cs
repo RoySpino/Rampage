@@ -1267,6 +1267,17 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////
+        private static List<SyntaxToken> inject(string sym){
+            StructNode snode;
+            List<SyntaxToken> lst;
+
+            snode = new StructNode(0, 0, sym);
+            lst = doLex(snode);
+
+            return lst;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////
         public static List<SyntaxToken> doDecimation3(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
         {
             bool hasEndToken, doFreeBlock = false;
@@ -1651,8 +1662,7 @@ namespace rpgc.Syntax
                             {
                                 ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), "^^LO", OP.chrPos));
                                 ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "=", OP.chrPos));
-                                snode = new StructNode(0, 0, $"%REM({FAC1.symbol}:{FAC2.symbol})");
-                                ret.AddRange(doLex(snode));
+                                ret.AddRange(inject($"%REM({FAC1.symbol}:{FAC2.symbol})"));
                                 ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                             }
                         }
@@ -1863,8 +1873,12 @@ namespace rpgc.Syntax
                     case "SCAN":
                         ret.AddRange(doLex(RESULT));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "=", OP.chrPos));
-                        snode = new StructNode(0, 0, $"%SCAN({FAC1.symbol}:{FAC2.symbol})");
-                        ret.AddRange(doLex(snode));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), "%SCAN", OP.chrPos));
+                        ret.AddRange(inject("("));
+                        ret.AddRange(doLex(FAC1));
+                        ret.AddRange(inject(":"));
+                        ret.AddRange(doLex(FAC2));
+                        ret.AddRange(inject(")"));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
                     case "ORGE":
