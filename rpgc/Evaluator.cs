@@ -393,6 +393,37 @@ namespace rpgc
                 value = value.Trim();
                 return value;
             }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Xlate)
+            {
+                string fromStr, toStr, source, res;
+                int lim;
+                Dictionary<char, char> xlate = new Dictionary<char, char>();
+
+                fromStr = evaluateExpression((node.Arguments[0])).ToString();
+                toStr = evaluateExpression((node.Arguments[1])).ToString();
+                source = evaluateExpression((node.Arguments[2])).ToString();
+                res = "";
+
+                // get the smallest length as the limit
+                lim = fromStr.Length;
+                if (lim > toStr.Length)
+                    lim = toStr.Length;
+
+                // create xlate dictionary
+                for (int i = 0; i < lim; i++)
+                    xlate.Add(fromStr[i], toStr[i]);
+                
+                // perform translation
+                foreach(char ch in source)
+                {
+                    if (xlate.ContainsKey(ch))
+                        res += xlate[ch];
+                    else
+                        res += ch;
+                }
+
+                return res;
+            }
             else
             {
                 // handle programmer defigned procedures/subrutines

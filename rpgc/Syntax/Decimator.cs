@@ -164,7 +164,7 @@ namespace rpgc.Syntax
                 else
                     sym = sym.TrimEnd();
 
-                // check if 
+                // set EVAL boolean
                 doEvalSlice = (i == 4 && isOnEvalLine == true);
 
                 tnode = new StructNode(lineNo, (slicer[i, 0]), sym.TrimEnd());
@@ -1881,6 +1881,17 @@ namespace rpgc.Syntax
                         ret.AddRange(inject(")"));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
+                    case "XLATE":
+                        ret.AddRange(doLex(RESULT));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "=", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), "%XLATE", OP.chrPos));
+                        ret.AddRange(inject("("));
+                        ret.AddRange(doLex(FAC1));
+                        ret.AddRange(inject(":"));
+                        ret.AddRange(doLex(FAC2));
+                        ret.AddRange(inject(")"));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        break;
                     case "ORGE":
                     case "ORGT":
                     case "ORLE":
@@ -2100,7 +2111,7 @@ namespace rpgc.Syntax
         public StructNode(int l, int ch, string sym)
         {
             linePos = l;
-            chrPos = (l + ch);
+            chrPos = (ch + 1);
             symbol = sym;
             factor = 0;
         }

@@ -262,7 +262,7 @@ namespace rpgc.Binding
                 for (int i = 0; i < blocks.Count; i++)
                 {
                     current = blocks[i];
-                    next = i == blocks.Count - 1 ? _end : blocks[i + 1];
+                    next = ((i == blocks.Count - 1) ? _end : blocks[i + 1]);
 
                     foreach (var statement in current.Statements)
                     {
@@ -270,6 +270,9 @@ namespace rpgc.Binding
 
                         switch (statement.tok)
                         {
+                            case BoundNodeToken.BNT_ERROREXP:
+                                // error was encountered: do not examin flow
+                                return new ControlFlowGraph(_start, _end, blocks, _branches);
                             case BoundNodeToken.BNT_GOTO:
                                 gs = (BoundGoToStatement)statement;
                                 toBlock = _blockFromLabel[gs.Label];
@@ -293,9 +296,6 @@ namespace rpgc.Binding
                             case BoundNodeToken.BNT_EXPRSTMT:
                                 if (isLastStatementInBlock)
                                     Connect(current, next);
-                                break;
-                            case BoundNodeToken.BNT_ERROREXP:
-                                Connect(current, _end);
                                 break;
                             default:
                                 throw new Exception($"Unexpected statement: {statement.tok}");

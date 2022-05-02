@@ -344,6 +344,7 @@ namespace rpgc.Syntax
                 case "%RAND":
                 case "%SQRT":
                 case "%LEN":
+                case "%XLATE":
                     return TokenKind.TK_IDENTIFIER;
                 default:
                     return TokenKind.TK_BADTOKEN;
