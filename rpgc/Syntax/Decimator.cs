@@ -1892,6 +1892,18 @@ namespace rpgc.Syntax
                         ret.AddRange(inject(")"));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
+                    case "CHECK":
+                    case "CHECKR":
+                        ret.AddRange(doLex(RESULT));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "=", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), "%CHECK", OP.chrPos));
+                        ret.AddRange(inject("("));
+                        ret.AddRange(doLex(FAC1));
+                        ret.AddRange(inject(":"));
+                        ret.AddRange(doLex(FAC2));
+                        ret.AddRange(inject(")"));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        break;
                     case "ORGE":
                     case "ORGT":
                     case "ORLE":

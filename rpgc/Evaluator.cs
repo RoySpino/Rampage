@@ -381,7 +381,7 @@ namespace rpgc
                 tmp = wrdValue.Substring(0, length);
 
                 if ((startIndex + length) >= source.Length)
-                    return (source.Substring(0, startIndex-1) + tmp);
+                    return (source.Substring(0, startIndex - 1) + tmp);
 
                 tmp = source.Substring(0, startIndex - 1) + tmp + source.Substring((startIndex + length - 1));
                 return tmp;
@@ -411,14 +411,40 @@ namespace rpgc
                 res = source;
                 for (int i = 0; i < lim; i++)
                 {
-                    // dont do if symbol is not in string
-                    if (res.Contains(fromStr[i]) == false)
-                        continue;
-
-                    res = res.Replace(fromStr[i], toStr[i]);
+                    // dont only if symbol is in string
+                    if (res.Contains(fromStr[i]) == true)
+                        res = res.Replace(fromStr[i], toStr[i]);
                 }
 
                 return res;
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Check)
+            {
+                string fromStr, source;
+                int idx;
+
+                fromStr = evaluateExpression((node.Arguments[0])).ToString();
+                source = evaluateExpression((node.Arguments[1])).ToString();
+
+                var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
+                idx = mtch.Index;
+
+                return idx + 1;
+            }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Checkr)
+            {
+                string fromStr, source;
+                int idx;
+
+                fromStr = evaluateExpression((node.Arguments[0])).ToString();
+                source = evaluateExpression((node.Arguments[1])).ToString();
+
+                source.Reverse();
+                var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
+                idx = mtch.Index;
+                idx = (source.Length - 1) - idx;
+
+                return idx + 1;
             }
             else
             {
