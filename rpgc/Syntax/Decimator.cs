@@ -1030,10 +1030,10 @@ namespace rpgc.Syntax
         private static SyntaxToken reportCSpecPositionError(StructNode snode)
         {
             // one of the factors is not left justified
-            location = new TextLocation(source, new TextSpan(snode.chrPos, snode.symbol.Length, snode.chrPos, snode.linePos));
+            location = new TextLocation(source, new TextSpan(snode.chrPos, snode.symbol.Length, snode.linePos, snode.chrPos));
             diagnostics.reportNotLeftJustified(location, snode.factor, snode.linePos);
 
-            return new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, snode.linePos, (snode.chrPos), snode.symbol);
+            return new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, snode.linePos, snode.chrPos, snode.symbol);
         }
 
         // ////////////////////////////////////////////////////////////////////////////
@@ -1602,7 +1602,8 @@ namespace rpgc.Syntax
                 }
 
                 // one or more of the symbols are not left justified
-                if (leftJustified(lst) != null)
+                snode = leftJustified(lst);
+                if (snode != null)
                 {
                     ret.Add(reportCSpecPositionError(snode));
                     return ret;
@@ -1623,7 +1624,7 @@ namespace rpgc.Syntax
                     {
                         location = new TextLocation(source, new TextSpan(0, 0, lst[4].linePos, lst[4].chrPos));
                         diagnostics.reportOpCodeNotAlone(location, lst[4].linePos, lst[4].chrPos, lst[4].symbol);
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, snode.linePos, (snode.chrPos), snode.symbol));
+                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, OP.linePos, (OP.chrPos), OP.symbol));
                         return ret;
                     }
 
@@ -1704,9 +1705,11 @@ namespace rpgc.Syntax
                     case "COUT":
                     case "PRINT":
                     case "DSPLY":
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                        ret.AddRange(inject("(%char("));
                         ret.AddRange(doLex(FAC1));
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        ret.AddRange(inject("))"));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
                     case "ITER":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ITER, OP.linePos, OP.chrPos, OpCode, OP.chrPos));
@@ -1896,7 +1899,7 @@ namespace rpgc.Syntax
                     case "CHECKR":
                         ret.AddRange(doLex(RESULT));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "=", OP.chrPos));
-                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), "%CHECK", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, OP.linePos, (OP.chrPos), $"%{OpCode}", OP.chrPos));
                         ret.AddRange(inject("("));
                         ret.AddRange(doLex(FAC1));
                         ret.AddRange(inject(":"));
