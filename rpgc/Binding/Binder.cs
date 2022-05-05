@@ -368,7 +368,7 @@ namespace rpgc.Binding
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)
         {
             BoundExpression expression;
-
+            
             expression = BindExpression(syntax.Expression, true);
 
             return new BoundExpressionStatement(expression);

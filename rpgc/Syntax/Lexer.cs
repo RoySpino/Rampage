@@ -835,7 +835,12 @@ namespace rpgc.Syntax
                     start += 1;
                 }
 
-                Value = peekStr;
+                symbol = SyntaxFacts.getCompilerConstansLiteral(peekStr);
+                if (symbol == null)
+                    symbol = peekStr;
+
+                Value = symbol;
+
                 return peekStr;
             }
             else

@@ -439,7 +439,7 @@ namespace rpgc
             string message;
             TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("({0},{1}): error: value can not be null", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: value given to variable can not be null", span.LineNo, span.LinePos);
 
             report(txtLoc, message);
         }
