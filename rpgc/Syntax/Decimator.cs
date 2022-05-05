@@ -531,9 +531,16 @@ namespace rpgc.Syntax
                         break;
                     case '/':
                         start = pos;
-                        kind = TokenKind.TK_DIV;
-                        Value = "/";
-                        nextChar();
+                        if (peek(1) == '/')
+                        {
+                            ignoreCommentLine();
+                        }
+                        else
+                        {
+                            kind = TokenKind.TK_DIV;
+                            Value = "/";
+                            nextChar();
+                        }
                         break;
                     case '(':
                         start = pos;
@@ -640,6 +647,22 @@ namespace rpgc.Syntax
             }
 
             return ret;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private static void ignoreCommentLine()
+        {
+            // loop until a control char is reached
+            // preferably [\n] or [\r]
+            while (true)
+            {
+                nextChar();
+                if (curChar <= 20)
+                    break;
+            }
+
+            kind = TokenKind.TK_SPACE;
+            Value = "";
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
@@ -876,6 +899,17 @@ namespace rpgc.Syntax
 
             // if the [=] is inside a parethisies then its a comparison
             onEvalLine = (parenCnt == 0 && onBooleanLine == false);
+
+            // if the line started with a comparison keyword then its a comparison
+            switch (lineType)
+            {
+                case "DOU":
+                case "DOW":
+                case "IF":
+                case "WHEN":
+                    onEvalLine = false;
+                    break;
+            }
 
             // check if the current line is a comparison or assignment
             if (onEvalLine == true && assignmentCnt < 1)
