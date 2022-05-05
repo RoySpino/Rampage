@@ -383,7 +383,7 @@ namespace rpgc.Syntax
                     case "*N":
                         return TokenKind.TK_IDENTIFIER;
                     default:
-                        return TokenKind.TK_BADTOKEN;
+                        return getCompilerConstans(symbol);
                 }
             }
         }
@@ -496,6 +496,22 @@ namespace rpgc.Syntax
             }
 
             return TokenKind.TK_BADTOKEN;
+        }
+        // //////////////////////////////////////////////////////////////////////////////////
+        public static string getCompilerConstansLiteral(string constKw)
+        {
+            switch (constKw)
+            {
+                case "*BLANK":
+                case "*BLANKS":
+                    return " ";
+
+                case "*ZERO":
+                case "*ZEROS":
+                    return "0";
+                default:
+                    return null;
+            }
         }
 
         // //////////////////////////////////////////////////////////////////////////////////

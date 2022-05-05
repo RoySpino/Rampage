@@ -808,13 +808,12 @@ namespace rpgc.Syntax
         // special indicators and constants defalts to mult if nothing is found
         private static string readCompilerConstantsOrMult()
         {
-            string symbol, peekStr;
+            string peekStr, tmp;
             char peekChar;
             int peekPos;
 
             start += pos;
             peekPos = 0;
-            symbol = "*";
             peekStr = "";
 
             while (true)
@@ -836,8 +835,13 @@ namespace rpgc.Syntax
                     nextChar();
                 }
 
-                Value = peekStr;
-                return peekStr;
+                tmp = SyntaxFacts.getCompilerConstansLiteral(peekStr);
+                if (tmp == null)
+                    tmp = peekStr;
+                    
+                Value = tmp;
+
+                return tmp;
             }
             else
             {
@@ -921,9 +925,6 @@ namespace rpgc.Syntax
             }
             else
                 ret = TokenKind.TK_EQ;
-
-            // reset boolean
-            onEvalLine = true;
 
             return ret;
         }
