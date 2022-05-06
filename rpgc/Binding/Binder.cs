@@ -878,6 +878,14 @@ namespace rpgc.Binding
                 return new BoundErrorExpression();
             }
 
+            // void ssignment error 
+            // TODO add subrutine check
+            if (boundExp.Type == TypeSymbol.ERROR) // && is subrutine 
+            {
+                diagnostics.reportVariableAssignedToVoid(syntax.EXPRESSION.Location(), _variable.type, name);
+                return new BoundErrorExpression();
+            }
+
             // check if the type of the variable matches its assigned expression
             // then bind the expression
             convExpr = BindConversion(boundExp, _variable.type, syntax.Location(), true);

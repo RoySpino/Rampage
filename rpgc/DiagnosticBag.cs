@@ -439,7 +439,7 @@ namespace rpgc
             string message;
             TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("({0},{1}): error: value given to variable can not be null", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: expression results in void", span.LineNo, span.LinePos);
 
             report(txtLoc, message);
         }
@@ -721,6 +721,17 @@ namespace rpgc
             message = string.Format("({0},{1}):error: stray ‘;’ in program", lineNo, charPos);
 
             report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportVariableAssignedToVoid(TextLocation textLocation, TypeSymbol type, string variableName)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            message = string.Format("({0},{1}): error: variable [{2}] assigned void expected {3}", span.LineNo, span.LinePos, variableName, type.Name);
+
+            report(textLocation, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
