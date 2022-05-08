@@ -628,8 +628,53 @@ namespace rpgc.Syntax
                 case "A":
                 case " ":
                     return Symbols.TypeSymbol.Char;
+                case "FLOAT(8)":
+                    return Symbols.TypeSymbol.Float;
+                case "void":
                 default:
                     return Symbols.TypeSymbol.Void;
+            }
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////
+        public static string lookupTypeName(string typeName)
+        {
+            if (typeName == null)
+                return "void";
+
+            switch (typeName)
+            {
+                case "IND":
+                case "N":
+                    return "bool";
+                case "INT(10)":
+                case "ZONED":
+                case "PACKED":
+                case "FLOAT":
+                case "S":
+                case "I":
+                case "F":
+                case "P":
+                case "Int32":
+                    return "Int(10)";
+                case "DATE":
+                case "D":
+                    return "Date";
+                case "TIMESTAMP":
+                case "TIME":
+                case "T":
+                    return "Date";
+                case "STRING":
+                case "CHAR":
+                case "VARCHAR":
+                case "A":
+                case " ":
+                    return "String";
+                case "FLOAT(8)":
+                    return "Float";
+                case "void":
+                default:
+                    return "void";
             }
         }
 

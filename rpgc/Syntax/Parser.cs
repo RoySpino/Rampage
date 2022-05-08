@@ -22,6 +22,7 @@ namespace rpgc.Syntax
         readonly SyntaxTree _sTree;
         SourceText text;
         TextLocation location;
+        Dictionary<string, string> functionReturns = new Dictionary<string, string>();
 
         public Parser(SyntaxTree syntaxTree)
         {
@@ -679,6 +680,7 @@ namespace rpgc.Syntax
             SyntaxToken keyword;
             ExpresionSyntax retExp;
             SyntaxToken tok;
+            string funcReturns;
 
             // match keyword and set default value for return
             keyword = match(TokenKind.TK_RETURN);
@@ -700,6 +702,16 @@ namespace rpgc.Syntax
 
             // consume the end of line token
             catchEndOfLine();
+
+            if (functionReturns.ContainsKey(curSubroutineScope))
+            {
+                funcReturns = functionReturns[curSubroutineScope];
+                if (SyntaxFacts.lookupTypeName(retExp.kind.GetTypeCode().ToString()) != SyntaxFacts.lookupTypeName(funcReturns))
+                {
+                    diagnostics.reportReturnTypeMismatch(retExp.Location(), retExp.kind.GetTypeCode().ToString(), funcReturns);
+                    return new ErrorStatementSyntax(_sTree);
+                }
+            }
 
             return new ReturnStatementSyntax(_sTree, keyword, retExp);
         }
@@ -932,10 +944,17 @@ namespace rpgc.Syntax
                 if (isSub == false)
                 {
                     intface = match(TokenKind.TK_PROCINFC);
-                    
+
                     pocInterfaceName = match(TokenKind.TK_IDENTIFIER);
                     if (identifier.kind == TokenKind.TK_BADTOKEN)
                         return new ErrorMemberSyntax(_sTree);
+
+                    // check if procedure name matches interface name
+                    if (pocInterfaceName.sym.ToString() != curSubroutineScope && pocInterfaceName.sym.ToString() != "*N")
+                    {
+                        diagnostics.reportProcedureNameMismatch(pocInterfaceName.Location(), curSubroutineScope);
+                        return new ErrorMemberSyntax(_sTree);
+                    }
 
                     returnType = parceOptinalTypeClause();
                     catchEndOfLine();
@@ -944,6 +963,13 @@ namespace rpgc.Syntax
                     endInterface = match(TokenKind.TK_ENDPI);
                     if (endInterface.kind == TokenKind.TK_BADTOKEN)
                         return new ErrorMemberSyntax(_sTree);
+
+                    // save function return type
+                    // used to check return operator
+                    if (returnType != null)
+                        functionReturns.Add(curSubroutineScope, returnType.Identifier.sym.ToString());
+                    else
+                        functionReturns.Add(curSubroutineScope, "void");
 
                     catchEndOfLine();
                 }

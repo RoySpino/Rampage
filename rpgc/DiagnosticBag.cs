@@ -735,6 +735,31 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportProcedureNameMismatch(TextLocation location, string name)
+        {
+            string message;
+            TextSpan span = location.SPAN;
+
+            message = string.Format("({0},{1}): error: procedure name mismatch expected *n or {2}", span.LineNo, span.LinePos, name);
+
+            report(location, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportReturnTypeMismatch(TextLocation textLocation, string returnKW, string expectedReturn)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            if (expectedReturn == "")
+                message = string.Format("({0},{1}): error: procedure returns void but key word is returning {1}", span.LineNo, span.LinePos, expectedReturn);
+            else
+                message = string.Format("({0},{1}): error: procedure returns {3} but key word is returning {2}", span.LineNo, span.LinePos, returnKW, expectedReturn);
+
+            report(textLocation, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         public IEnumerator<Diagnostics> GetEnumerator()
         {
             return _diagnostic.GetEnumerator();
