@@ -20,19 +20,28 @@ namespace rpgc.Binding
             if (value is int)
                 Type = TypeSymbol.Integer;
             else
+            {
                 if (value is float || value is double)
                     Type = TypeSymbol.Float;
                 else
+                {
                     if (value is bool)
                         Type = TypeSymbol.Indicator;
                     else
+                    {
                         if (value is string || value is char)
                             Type = TypeSymbol.Char;
                         else
+                        {
                             if (value is VariableSymbol)
                                 Type = ((VariableSymbol)value).getType();
                             else
-                                throw new Exception($"Unexpected literal {value} of type{value.GetType()}");
+                                Type = TypeSymbol.Void;
+                            //throw new Exception($"Unexpected literal {value} of type{value.GetType()}");
+                        }
+                    }
+                }
+            }
         }
     }
 }

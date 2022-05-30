@@ -14,16 +14,23 @@ namespace rpgc.Binding
         public BoundGlobalScope Preveous { get; }
         public ImmutableArray<Diagnostics> Diagnostic { get; }
         public ImmutableArray<VariableSymbol> Variables { get; }
+        public ImmutableArray<BoundStatement> Statements { get; }
         public ImmutableArray<FunctionSymbol> Functons { get; }
-        public BoundStatement Statement { get; set; }
+        public FunctionSymbol MainFunction { get; }
+        public FunctionSymbol ScriptFunciton { get; }
+        public ImmutableArray<BoundStatement> BoundStatements { get; }
 
-        public BoundGlobalScope(BoundGlobalScope prev, ImmutableArray<Diagnostics> diag, ImmutableArray<FunctionSymbol> functon, ImmutableArray<VariableSymbol> vars, BoundStatement stmnt)
+        //public BoundStatement Statement { get; set; }
+
+        public BoundGlobalScope(BoundGlobalScope prev, ImmutableArray<Diagnostics> diag, ImmutableArray<FunctionSymbol> functon, ImmutableArray<VariableSymbol> vars, FunctionSymbol _mainFunction, FunctionSymbol scriptFunciton, ImmutableArray<BoundStatement> stmnt)
         {
             Preveous = prev;
             Diagnostic = diag;
             Variables = vars;
-            Statement = stmnt;
+            Statements = stmnt;
             Functons = functon;
+            MainFunction = _mainFunction;
+            ScriptFunciton = scriptFunciton;
         }
     }
 }

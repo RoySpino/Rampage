@@ -186,6 +186,7 @@ namespace rpgc
             {TokenKind.TK_ENDPI,"End-Pi"},
             {TokenKind.TK_NEWLINE,"NewLine"}};
 
+
         public void report(TextLocation txtLoc, string message)
         {
             Diagnostics diag = new Diagnostics(txtLoc, message);
@@ -228,6 +229,17 @@ namespace rpgc
             message = string.Format("({2},{3}): error: unexpected token ‘{0}’ expected ‘{1}’", enumHMI(actual), enumHMI(expected), span.LineNo, span.LinePos);
 
             report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportInvalidExpressionStatement(TextLocation textLocation)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            message = string.Format("({2},{3}): error: only assignment, call, increment, decrement, await, and new object expressions can be used as a statement", span.LineNo, span.LinePos);
+
+            report(textLocation, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////
@@ -632,6 +644,19 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportProcedureSouldNotReturnVoid(TextLocation txtLoc, string val)
+        {
+            string message, typename;
+            TextSpan span = txtLoc.SPAN;
+
+            typename = SyntaxFacts.lookupTypeName(val);
+
+            message = string.Format("({0},{1}): Procedure returns {2} but statement returns void", span.LineNo, span.LinePos, typename);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         internal void reportBadFunctionOrProcedure(TextLocation txtLoc, string name)
         {
             string message;
@@ -755,6 +780,39 @@ namespace rpgc
                 message = string.Format("({0},{1}): error: procedure returns void but key word is returning {1}", span.LineNo, span.LinePos, expectedReturn);
             else
                 message = string.Format("({0},{1}): error: procedure returns {3} but key word is returning {2}", span.LineNo, span.LinePos, returnKW, expectedReturn);
+
+            report(textLocation, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void repotCannotMixMainWithGlobalInstruction(TextLocation textLocation)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            message = string.Format("({0},{1}): error: cannot declare main function in no main file", span.LineNo, span.LinePos);
+
+            report(textLocation, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportMainReturningAValue(TextLocation textLocation)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            message = string.Format("({0},{1}): error: Main cannot return a value", span.LineNo, span.LinePos);
+
+            report(textLocation, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportMultipleMainFunctions(TextLocation textLocation)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            message = string.Format("({0},{1}): error: Program has more than one entry point defined", span.LineNo, span.LinePos);
 
             report(textLocation, message);
         }

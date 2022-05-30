@@ -12,6 +12,7 @@ namespace rpgc
     internal sealed class RpgRepl : Repl
     {
         Complation prev;
+        private static readonly Complation emptyCompilation = Complation.CreateScript(null);
 
         // /////////////////////////////////////////////////////////////////////////////////////
         protected override void processMetaCommand(string ln)
@@ -48,7 +49,9 @@ namespace rpgc
             rpgc.Text.SourceText Text;
             TextSpan spanPrefix, spanError;
 
-            complation = ((prev == null) ? new Complation(stree) : prev.continueWith(stree));
+            complation = Complation.CreateScript(prev, stree);
+            
+            //complation = ((prev == null) ? new Complation(stree) : prev.continueWith(stree));
             //bexpr = complation.evalate(variables);
 
             // show lexed program tree

@@ -21,32 +21,24 @@ namespace rpgc.Syntax
         public SourceText TEXT { get; }
         public ImmutableArray<Diagnostics> Diagnostics { get; }
         public CompilationUnit ROOT { get; }
+        public bool IsScript { get; }
         public SyntaxToken EOFT;
         static bool includeEndOfFile_;
         static List<SyntaxToken> tokens;
 
-        private SyntaxTree(SourceText text, ParseHandler handler)
+        private SyntaxTree(SourceText text, ParseHandler handler, bool _isscript)
         {
             TEXT = text;
             CompilationUnit rt;
             ImmutableArray<Diagnostics> diag;
 
+            IsScript = _isscript;
+
+            // calls Parcer
             handler(this, out rt, out diag);
 
             Diagnostics = diag;
             ROOT = rt;
-        }
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        public static SyntaxTree Load(string fileName)
-        {
-            string text;
-            SourceText sourceText_;
-
-            text = System.IO.File.ReadAllText(fileName);
-            sourceText_ = SourceText.FROM(text, fileName);
-
-            return Parse(sourceText_);
         }
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,9 +54,9 @@ namespace rpgc.Syntax
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // second Parse call 
-        public static SyntaxTree Parse(SourceText text)
+        public static SyntaxTree Parse(SourceText text, bool _isScript = false)
         {
-            return new SyntaxTree(text, Parse);
+            return new SyntaxTree(text, Parse, _isScript);
         }
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +69,20 @@ namespace rpgc.Syntax
             root = par.parseCompilationUnit();
             diagnostics = par.getDiagnostics().ToImmutableArray();
         }
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /*
+        public static SyntaxTree Load(string fileName)
+        {
+            string text;
+            SourceText sourceText_;
+
+            text = System.IO.File.ReadAllText(fileName);
+            sourceText_ = SourceText.FROM(text, fileName);
+
+            return Parse(sourceText_);
+        }
+        */
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*
@@ -107,6 +113,10 @@ namespace rpgc.Syntax
         */
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+        /**************************************
+         * ************************************
         public static ImmutableArray<SyntaxToken> ParseTokens(SourceText text, out ImmutableArray<Diagnostics> diagnostics, bool includeEndOfFile = false)
         {
             SyntaxTree syntaxTree;
@@ -118,8 +128,11 @@ namespace rpgc.Syntax
 
             return tokens.ToImmutableArray();
         }
+        */
 
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // /////     /////     /////     /////     /////     /////     /////     /////     /////     /////     /////     /////
+        // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         static void ParseTokens(SyntaxTree st, out CompilationUnit root, out ImmutableArray<Diagnostics> d)
         {
             List<SyntaxToken> Tokens_;

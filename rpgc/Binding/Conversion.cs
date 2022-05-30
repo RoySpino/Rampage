@@ -33,6 +33,17 @@ namespace rpgc.Binding
             if (from == to)
                 return Conversion.IDENTITY;
 
+            // to Any
+            if (from != TypeSymbol.Void && to == TypeSymbol.Any)
+            {
+                return Conversion.IMPLICIT;
+            }
+
+            if (from == TypeSymbol.Any && to != TypeSymbol.Void)
+            {
+                return Conversion.EXPLICIT;
+            }
+
             // to string
             if (from == TypeSymbol.Indicator || from == TypeSymbol.Integer || from == TypeSymbol.Date || from == TypeSymbol.DateTime || from == TypeSymbol.Float)
             {

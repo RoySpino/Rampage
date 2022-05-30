@@ -17,6 +17,7 @@ namespace rpgc.Symbols
         public static readonly TypeSymbol Time = new TypeSymbol("TIME");
         public static readonly TypeSymbol DateTime = new TypeSymbol("DATETIME");
         public static readonly TypeSymbol Float = new TypeSymbol("FLOAT(8)");
+        public static readonly TypeSymbol Any = new TypeSymbol("ANY");
         public static readonly TypeSymbol Void = new TypeSymbol("?");
         public static readonly TypeSymbol ERROR = new TypeSymbol("?");
 

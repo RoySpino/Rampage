@@ -15,17 +15,21 @@ namespace rpgc.Binding
         private FunctionSymbol function_;
         private int loopControlLableCnt = 0;
         public Stack<(BoundLabel BreakLable, BoundLabel ContinueLable)> _loopStack = new Stack<(BoundLabel BreakLable, BoundLabel ContinueLable)>();
+        private readonly bool IsScript;
 
+        /*
         public Binder(BoundScope parant)
         {
             scope = new BoundScope(parant);
         }
+        */
 
         // ///////////////////////////////////////////////////////////////////////////////
-        public Binder(BoundScope parant, FunctionSymbol funcn) : this(parant)
+        public Binder(bool isScript,BoundScope parant, FunctionSymbol funcn) //: this(parant)
         {
             scope = new BoundScope(parant);
             function_ = funcn;
+            IsScript = isScript;
 
             if (function_ != null)
             {
@@ -38,11 +42,11 @@ namespace rpgc.Binding
 
         // ///////////////////////////////////////////////////////////////////////////////
         //public static BoundGlobalScope bindGlobalScope(BoundGlobalScope prev, CompilationUnit syntax)
-        public static BoundGlobalScope bindGlobalScope(BoundGlobalScope prev, ImmutableArray<SyntaxTree> sTrees)
+        public static BoundGlobalScope bindGlobalScope(bool isScript, BoundGlobalScope prev, ImmutableArray<SyntaxTree> sTrees)
         {
             Binder _binder;
             BoundScope parantScop;
-            BoundBlockStatement stmt;
+            //BoundBlockStatement stmt;
             BoundStatement statment;
             ImmutableArray<BoundStatement>.Builder statementBuilder;
             ImmutableArray<FunctionSymbol> functon;
@@ -54,11 +58,15 @@ namespace rpgc.Binding
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies;
             IEnumerable<ProcedureDeclarationSyntax> functionDeclar;
             IEnumerable<GlobalStatmentSyntax> gblStatements;
+            FunctionSymbol[] mainFunctionArr;
+            FunctionSymbol mainFunction, scriptFunction;
+            IEnumerable<ProcedureDeclarationSyntax> firstGlbStatement;
 
-            //BoundScope parantScope;
+            mainFunction = null;
+            scriptFunction = null;
 
             parantScop = createParantScope(prev);
-            _binder = new Binder(parantScop, funcn: null);
+            _binder = new Binder(isScript, parantScop, funcn: null);
             diag = new DiagnosticBag();
 
 
@@ -73,17 +81,17 @@ namespace rpgc.Binding
 
 
             // load user deffigned Functions
-            functionBodies = ImmutableDictionary.CreateBuilder <FunctionSymbol, BoundBlockStatement>();
+            functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
 
             if (prev != null)
             {
                 foreach (FunctionSymbol _function in prev.Functons)
                 {
-                    _binder = new Binder(parantScop, _function);
+                    _binder = new Binder(isScript, parantScop, _function);
                     body = _binder.BindStatements(_function.Declaration.Body);
                     loweredBody = Lowering.Lowerer.Lower(body);
                     functionBodies.Add(_function, loweredBody);
-                    
+
                     diag.AddRange(_binder.diagnostics);
                 }
             }
@@ -97,15 +105,74 @@ namespace rpgc.Binding
 
             foreach (GlobalStatmentSyntax gblStmnt in gblStatements)
             {
-                statment = _binder.BindStatements(gblStmnt.Statement);
+                statment = _binder.BindGlobalStatements(gblStmnt.Statement);
                 statementBuilder.Add(statment);
             }
 
+            // global instructions can only occur in a scripting mode
+            // they cannot exist when there is a dedicated main function
+            if (isScript == false)
+            {
+                // find the main funciton
+                functon = _binder.scope.getDeclaredFunctions();
+                mainFunctionArr = (from func in functon
+                                   where func.Name == "MAIN"
+                                   select func).ToArray();
+
+                // if there are multiple main functions report an error
+                // otherwise get the main function
+                if (mainFunctionArr != null)
+                {
+                    if (mainFunctionArr.Length > 1)
+                    {
+                        mainFunction = null;
+
+                        // multiple mains found
+                        foreach (FunctionSymbol fn in mainFunctionArr)
+                            diag.reportMultipleMainFunctions(fn.Declaration.Location());
+                    }
+                    else
+                        mainFunction = mainFunctionArr[0];
+                }
+
+                // check the main funciton for errors
+                if (mainFunction != null)
+                {
+                    // check if the main function is returning a value MAIN MUST BE NULL
+                    if (mainFunction.Type != TypeSymbol.Void)
+                        diag.reportMainReturningAValue(mainFunction.Declaration.Location());
+                }
+                else
+                {
+                    // check if there are any statements in nomain file
+                    if (gblStatements.Any())
+                    {
+                        firstGlbStatement = sTrees.Select(st => st.ROOT.Members.OfType<ProcedureDeclarationSyntax>().FirstOrDefault())
+                            .Where(ts => ts != null)
+                            .ToArray();
+                        diag.repotCannotMixMainWithGlobalInstruction(mainFunction.Declaration.Location());
+
+                        foreach (ProcedureDeclarationSyntax fgs in firstGlbStatement)
+                        {
+                            diag.repotCannotMixMainWithGlobalInstruction(fgs.Location());
+
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (gblStatements.Any())
+                    scriptFunction = new FunctionSymbol("^eval", ImmutableArray<ParamiterSymbol>.Empty, TypeSymbol.Any);
+                else
+                    scriptFunction = null;
+
+                mainFunction = null;
+            }
 
 
             //stmt = bind.BindStatements(statment);
-            stmt = new BoundBlockStatement(statementBuilder.ToImmutable());
-            functon = _binder.scope.getDeclaredFunctions();
+            //stmt = new BoundBlockStatement(statementBuilder.ToImmutable());
             vars = _binder.scope.getDeclaredVariables();
             diag.AddRange(_binder.diagnostics);// = bind.diagnostics.ToImmutableArray();
             tDiagonostics = diag.ToImmutableArray();
@@ -113,54 +180,85 @@ namespace rpgc.Binding
             if (prev != null)
                 tDiagonostics = tDiagonostics.InsertRange(0, prev.Diagnostic);
 
-            return new BoundGlobalScope(prev, tDiagonostics, functon, vars, stmt);
+            return new BoundGlobalScope(prev, tDiagonostics, functon, vars, mainFunction, scriptFunction, statementBuilder.ToImmutable());
         }
-        
+
         // ///////////////////////////////////////////////////////////////////////////////
-        public static BoundProgram BindProgram(BoundGlobalScope gblScope)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram prv, BoundGlobalScope gblScope)
         {
             BoundScope parantScope;
             Binder _binder;
             BoundProgram pgm;
             BoundStatement body;
-            BoundGlobalScope scopes;
+            BoundLiteralExp nullValue;
+            BoundExpressionStatement es;
+            //BoundGlobalScope scopes;
             BoundBlockStatement loweredBody;
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies;
             ImmutableArray<Diagnostics> diagnostics;
             ImmutableArray<Diagnostics> tmp = ImmutableArray.Create<Diagnostics>();
+            ImmutableArray<BoundStatement> statements;
             bool pathsError;
 
 
             diagnostics = gblScope.Diagnostic;
             parantScope = createParantScope(gblScope);
-            functionBodies = ImmutableDictionary.CreateBuilder <FunctionSymbol, BoundBlockStatement>();
-            scopes = gblScope;
 
-            while (scopes != null)
+            // errors where made before binder stop evrything and display errors
+            if (diagnostics.Any())
+                return new BoundProgram(prv, gblScope, diagnostics, null, null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty);
+
+            functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
+
+
+
+            foreach (FunctionSymbol _function in gblScope.Functons)
             {
-                foreach (FunctionSymbol _function in scopes.Functons)
-                {
-                    _binder = new Binder(parantScope, _function);
-                    body = _binder.BindStatements(_function.Declaration.Body);
-                    loweredBody = Lowering.Lowerer.Lower(body);
+                _binder = new Binder(isScript, parantScope, _function);
+                body = _binder.BindStatements(_function.Declaration.Body);
+                loweredBody = Lowering.Lowerer.Lower(body);
 
-                    // check function paths
-                    pathsError = ControlFlowGraph.AllPathsReturn(loweredBody);
-                    if (_function.Type != TypeSymbol.Void && pathsError == false)
-                        _binder.diagnostics.reportNotAllCodePathsReturn(_function.Declaration.Location(), _function.Name);
+                // check function exit paths
+                pathsError = ControlFlowGraph.AllPathsReturn(loweredBody);
+                if (_function.Type != TypeSymbol.Void && pathsError == false)
+                    _binder.diagnostics.reportNotAllCodePathsReturn(_function.Declaration.Location(), _function.Name);
 
-                    functionBodies.Add(_function, loweredBody);
+                functionBodies.Add(_function, loweredBody);
 
-                    tmp = tmp.AddRange(diagnostics);
-                    tmp = tmp.AddRange(_binder.diagnostics);
-                    diagnostics = tmp;
-                }
-
-                // go to next scope
-                scopes = scopes.Preveous;
+                // copy diagnostics to main diagnostics
+                tmp = tmp.AddRange(diagnostics);
+                tmp = tmp.AddRange(_binder.diagnostics);
+                diagnostics = tmp;
             }
 
-            pgm = new BoundProgram(gblScope, diagnostics, functionBodies.ToImmutable());
+            if (gblScope.MainFunction == null && gblScope.Statements.Any())
+            {
+                loweredBody = Lowering.Lowerer.Lower(new BoundBlockStatement(gblScope.Statements));
+                functionBodies.Add(gblScope.ScriptFunciton, loweredBody);
+            }
+            else
+            {
+                if (gblScope.ScriptFunciton != null)
+                {
+                    statements = gblScope.Statements;
+                    if (statements.Length == 1 && statements[0] is BoundExpressionStatement)
+                    {
+                        es = (BoundExpressionStatement)statements[0];
+                        if (es.Expression.Type != TypeSymbol.Void)
+                            statements = statements.SetItem(0, new BoundReturnStatement(es.Expression));
+                    }
+                    else
+                    {
+                        nullValue = new BoundLiteralExp("");
+                        statements = statements.Add(new BoundReturnStatement(nullValue));
+                    }
+
+                    loweredBody = Lowering.Lowerer.Lower(new BoundBlockStatement(statements));
+                    functionBodies.Add(gblScope.ScriptFunciton, loweredBody);
+                }
+            }
+
+            pgm = new BoundProgram(prv, gblScope, diagnostics, gblScope.MainFunction, gblScope.ScriptFunciton, functionBodies.ToImmutable());
             return pgm;
         }
 
@@ -219,7 +317,45 @@ namespace rpgc.Binding
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
-        private BoundStatement BindStatements(StatementSyntax syntax)
+        private BoundStatement BindGlobalStatements(StatementSyntax body)
+        {
+            return BindStatements(body, true);
+        }
+
+        // ///////////////////////////////////////////////////////////////////////////////
+        private BoundStatement BindStatements(StatementSyntax syntax, bool isGlobal = false)
+        {
+            BoundStatement result;
+            BoundExpressionStatement es;
+            BoundNodeToken kind;
+
+            result = BindStatementsInternal(syntax);
+
+            if (IsScript == false && isGlobal == false)
+            {
+                if (result is BoundExpressionStatement)
+                {
+                    es = (BoundExpressionStatement)result;
+                    kind = es.Expression.tok;
+
+                    switch (kind)
+                    {
+                        case BoundNodeToken.BNT_ASNEX:
+                        case BoundNodeToken.BNT_ERROREXP:
+                        case BoundNodeToken.BNT_CALLEXP:
+                            return result;
+                        default:
+                            diagnostics.reportInvalidExpressionStatement(syntax.Location());
+                            return new BoundErrorStatement();
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        // ///////////////////////////////////////////////////////////////////////////////
+        private BoundStatement BindStatementsInternal(StatementSyntax syntax)
         {
             switch (syntax.kind)
             {
@@ -326,6 +462,7 @@ namespace rpgc.Binding
             returnType = bindTypeClause(syntax.ReturnType); //?? TypeSymbol.Void;
             procedur = new FunctionSymbol(name, parms.ToImmutable(), returnType, syntax, syntax.isSubroutine);
 
+            // check for redeclaration
             if (scope.declareFunction(procedur) == false)
                 diagnostics.reportFunctionAlreadyDeclared(syntax.Location(), name);
         }
@@ -425,6 +562,11 @@ namespace rpgc.Binding
                 }
             }
 
+            // no expression was passed to return 
+            // return a void
+            if (expr == null)
+                expr = new BoundLiteralExp(null);
+
             return new BoundReturnStatement(expr);
         }
 
@@ -441,7 +583,8 @@ namespace rpgc.Binding
             TextSpan span;
             SyntaxNode firstNode;
             ExpresionSyntax lastNode;
-            bool isCountGreater, a1, hasErrors = false;
+            bool isCountGreater, a1;
+            //bool hasErrors = false;
             int argsCnt, fnParamsCnt;
             string name;
 
@@ -542,7 +685,12 @@ namespace rpgc.Binding
                 argument = boundArguments[i];
                 parametr = function.Paramiter[i];
 
+                // try to convert the argument to the function expected argument
+                boundArguments[i] = BindConversion(syntax.Arguments[i], parametr.Type);
+
+
                 // check argumet and paramiter types
+                /*
                 if (argument.Type != parametr.type)
                 {
                     //diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].span, argument.Type, parametr.type);
@@ -553,10 +701,11 @@ namespace rpgc.Binding
                     }
                     hasErrors = true;
                 }
+                */
             }
 
-            if (hasErrors == true)
-                return new BoundErrorExpression();
+            //if (hasErrors == true)
+            //    return new BoundErrorExpression();
 
             // bind function fall
             return new BoundCallExpression(function, boundArguments.ToImmutable());
@@ -1028,6 +1177,8 @@ namespace rpgc.Binding
         {
             switch (name.ToUpper())
             {
+                case "ANY":
+                    return TypeSymbol.Any;
                 case "%CHAR":
                     return TypeSymbol.Char;
                 case "%DATE":

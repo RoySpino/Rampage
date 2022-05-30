@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace rpgc.Syntax
 {
@@ -765,7 +765,7 @@ namespace rpgc.Syntax
         }
 
         // //////////////////////////////////////////////////////////////////////////////////
-        public static string normalizeLine(string line)
+        public static string normalizeLine(string line, bool doIBMLine = false)
         {
             char[] ret;
             bool onString = false;
@@ -774,6 +774,13 @@ namespace rpgc.Syntax
 
             sbuild = new StringBuilder();
             ret = line.ToCharArray();
+
+            // cut out comments in traditinal IBM RPG
+            if (doIBMLine == true)
+            {
+                // cut out the first 5 chars
+                line = line.Substring(5);
+            }
 
             // if the line does not have a quote
             if (line.Contains("'") == false)
@@ -880,6 +887,71 @@ namespace rpgc.Syntax
             }
         }
 
+        // ////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static List<SyntaxToken> prepareMainFunction(SyntaxTree sTree_, TokenKind lineTerminator, bool isBeginingMain)
+        {
+            List<SyntaxToken> ret;
+
+            ret = new List<SyntaxToken>();
+
+            if (isBeginingMain == true)
+            {
+                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_PROCDCL, 0, 0, "B", 0));
+                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, 0, 0, "MAIN", 0));
+            }
+            else
+            {
+                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ENDPROC, 0, 0, "E", 0));
+            }
+
+            ret.Add(new SyntaxToken(sTree_, lineTerminator, 0, 0, "", 0));
+
+            return ret;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static bool isIBMDoc(string[] lines)
+        {
+            int col1prpb, col6prob;
+            bool onCol1, onCol6;
+            Regex regCol1, regCol6;
+
+            regCol1 = new Regex(@"^([hfdicop])([^*]{2})([ n])([kml0-9][0-9a-z]|\s\s)", RegexOptions.IgnoreCase);
+            regCol6 = new Regex(@"^(.....)([hfdicop])([^*]{2})([ n])([kml0-9][0-9a-z]|\s\s)", RegexOptions.IgnoreCase);
+            col1prpb = 0;
+            col6prob = 0;
+
+            foreach (string lin in lines)
+            {
+                onCol1 = regCol1.Match(lin).Success;
+                onCol6 = regCol6.Match(lin).Success;
+
+                // found a instruction line match
+                if (onCol1 == true || onCol6 == true)
+                {
+                    // add 1 only if the code is a rampage line
+                    if (onCol1 == true)
+                    {
+                        col1prpb += 1;
+                        col6prob -= 1;
+                    }
+                    else
+                    {
+                        // add 1 only if the code is a IBM line
+                        col1prpb -= 1;
+                        col6prob += 1;
+                    }
+                }
+            }
+
+            // check which column has the greatest chance of beeing the spec column
+            if (col1prpb > col6prob)
+                return false;
+            else
+                return true;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////////
         internal static bool cascadeBlockStart(string line)
         {
             string opCode;
@@ -923,5 +995,6 @@ namespace rpgc.Syntax
                     return false;
             }
         }
+
     }
 }

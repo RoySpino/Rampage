@@ -13,7 +13,7 @@ namespace rpgc.Syntax
         static char specChkStr = 'H';
         static bool isProcSection = false;
         static TokenKind kind;
-        static char curChar;
+        static char curChar, prevSpec;
         static object Value;
         static int start, lineStart;
         static string tmpVal;
@@ -32,7 +32,10 @@ namespace rpgc.Syntax
         private static SourceText source;
         private static TextLocation location;
         private static bool isInFreeTag;
-        private static bool inDecareBlock;
+        private static bool inDecareBlock,
+            doAddMainFunciton = true,
+            doAddMainProcEnd = false,
+            doAddMainProcSrt = true;
 
         private static bool isGoodSpec(char spec, int line)
         {
@@ -376,7 +379,7 @@ namespace rpgc.Syntax
         }
 
         // //////////////////////////////////////////////////////////////////////////
-        internal static List<SyntaxToken> performCSpecVarDeclar(string[] arr)
+        internal static List<SyntaxToken> performCSpecVarDeclar(List<string> arr)
         {
             List<StructNode> nlist = new List<StructNode>();
             List<string> lstVars = new List<string>();
@@ -1072,199 +1075,6 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////
-        public static List<StructNode> doDecimation(int lineNo, string line)
-        {
-            char Specification;
-            string tmp;
-
-            tmp = line.ToUpper().PadRight(72);
-            Specification = line[0];
-
-            // begin decimation
-            switch (Specification)
-            {
-                case 'H':
-                    return decimateHSpec(lineNo, tmp);
-                case 'F':
-                    return decimateFSpec(lineNo, tmp);
-                case 'D':
-                    return decimateDSpec(lineNo, tmp);
-                case 'I':
-                    return null;
-                case 'C':
-                    return decimateCSpec(lineNo, tmp);
-                case 'O':
-                    return null;
-                case 'P':
-                    return decimatePSpec(lineNo, tmp);
-                default:
-                    return null;
-            }
-        }
-
-        // ////////////////////////////////////////////////////////////////////////////
-        public static List<SyntaxToken> doDecimation2(int lineNo, int charPos, string line, ref DiagnosticBag diag)
-        {
-            char Specification;
-            string tmp;
-            List<StructNode> lst;
-            List<SyntaxToken> ret;
-
-            // setup global diagnostic bag
-            diagnostics = diag;
-
-            // setup line
-            tmp = line.PadRight(72);
-            Specification = line[0];
-            lineStart = charPos;
-
-            // end of file line
-            if (line[0] == '\0')
-                return new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_EOI, lineNo, charPos, "_") });
-
-            // do not try to decimate a blank line
-            if (tmp[0] == ' ')
-                return new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, lineNo, 0, "") });
-
-            // handle comments
-            if (tmp[1] == '*' || (tmp[1] == '/' && tmp[2] == '/'))
-                return new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, lineNo, 0, "") });
-
-
-
-            // begin decimation
-            switch (Specification)
-            {
-                case 'H':
-                    lst = decimateHSpec(lineNo, tmp);
-                    ret = dSpecRectifier(lst);
-                    break;
-                case 'F':
-                    lst = decimateFSpec(lineNo, tmp);
-                    ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "") });
-                    break;
-                case 'D':
-                    lst = decimateDSpec(lineNo, tmp);
-                    ret = dSpecRectifier(lst);
-                    break;
-                case 'I':
-                    ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
-                    break;
-                case 'C':
-                    lst = decimateCSpec(lineNo, tmp);
-
-                    // ------------------------------------------------------------------------------------------------------------------------------------
-                    // C  N01++++
-                    // handle conditinal idicatiors for columns 1-8 
-                    if (lst[0].symbol != "" || lst[1].symbol != "" || lst[2].symbol != "")
-                    {
-                        // at the start of indicator control insert an if block
-                        if (localTokenLst2.Count == 0)
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IF, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
-
-                        // add a AND/ OR token if needed
-                        switch (lst[0].symbol)
-                        {
-                            case "AN":
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_AND, lst[0].linePos, (lst[0].chrPos), "AN", lst[0].chrPos));
-                                break;
-                            case "OR":
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_OR, lst[0].linePos, (lst[0].chrPos), "OR", lst[0].chrPos));
-                                break;
-                            case "":
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
-                                break;
-                            default:
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
-                                break;
-                        }
-                        pos += 2;
-
-                        // add NOT if needed
-                        switch (lst[1].symbol)
-                        {
-                            case "N":
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NOT, lst[0].linePos, (lst[1].chrPos), "N", lst[0].chrPos));
-                                break;
-                            case "":
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, lst[0].linePos, (lst[1].chrPos), "", lst[0].chrPos));
-                                break;
-                            default:
-                                localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, (lst[1].chrPos), "", lst[0].chrPos));
-                                break;
-                        }
-                        pos += 1;
-
-                        // Add Indicator boolean logic
-                        tmp = SyntaxFacts.getAllIndicators().Where(ik => ik == lst[2].symbol).FirstOrDefault();
-                        if (tmp != null)
-                        {
-                            lst[2].symbol = $"*IN{lst[2].symbol}";
-                            localTokenLst2.AddRange(doLex(lst[2]));
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_EQ, lst[2].linePos, (lst[2].chrPos), "", lst[2].chrPos));
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_INDOFF, lst[2].linePos, (lst[2].chrPos), "", lst[2].chrPos));
-                        }
-
-                        // return blank list this will request another card
-                        if (lst[4].symbol == "")
-                            return new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, 0, 0, "", "!__ReqCard__", linePos) });
-                        else
-                        {
-                            // compleate hidden goto statement
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_GOTO, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, lst[0].linePos, lst[0].chrPos, $"^^ITag{ITagCnt}", lst[0].chrPos));
-                            localTokenLst2.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ENDIF, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                            ITagCnt += 1;
-                        }
-                    }
-                    // ------------------------------------------------------------------------------------------------------------------------------
-                    // handle multiline RPG conditinals (ANDEQ, ORGT, ORNE)
-                    if (SyntaxFacts.doColectAnotherCard(lst[4].symbol) == true)
-                    {
-                        localTokenLst.AddRange(cSpecRectifier(lst));
-
-                        // colect tokens for this line
-                        if (localTokenLst[localTokenLst.Count - 1].kind == TokenKind.TK_BLOCKSTART)
-                            localTokenLst.RemoveAt(localTokenLst.Count - 1);
-
-                        // return blank list this will request another card
-                        return new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, 0, 0, "", "!__ReqCard__") });
-                    }
-                    if (localTokenLst.Count > 0)
-                    {
-                        // move local tokens to returning list 
-                        // then reset for next run
-                        ret = new List<SyntaxToken>(localTokenLst);
-                        localTokenLst.Clear();
-
-                        // add block start token
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, ret[ret.Count - 1].line, (ret[ret.Count - 1].pos), ""));
-                        ret.AddRange(cSpecRectifier(lst));
-                        return ret;
-                    }
-
-                    // ------------------------------------------------------------------------------------------------------------------------------
-                    // do standard lex
-                    ret = cSpecRectifier(lst);
-                    break;
-                case 'O':
-                    ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
-                    break;
-                case 'P':
-                    ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
-                    break;
-                default:
-                    ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
-                    break;
-            }
-
-
-            // return lex tokens
-            return ret;
-        }
-
-        // ////////////////////////////////////////////////////////////////////////////
         // use global varialbe to assign ending type
         // this returns a value other than space on when DBlockType changes
         private static List<SyntaxToken> getEndInterfaceOrPrototype()
@@ -1315,10 +1125,10 @@ namespace rpgc.Syntax
         // ////////////////////////////////////////////////////////////////////////////
         public static List<SyntaxToken> doDecimation3(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
         {
-            bool hasEndToken, doFreeBlock = false;
+            bool doFreeBlock = false;
             char Specification;
             string tmp, line;
-            int charPos, tn, lineNo;
+            int charPos, lineNo;
             string peekOp, cascadeOp = null;
             List<StructNode> lst;
             List<SyntaxToken> ret;
@@ -1327,6 +1137,7 @@ namespace rpgc.Syntax
             sTree_ = st;
             ret = new List<SyntaxToken>();
             source = txt;
+            Specification = ' ';
 
             // setup global diagnostic bag
             diagnostics = diag;
@@ -1337,6 +1148,9 @@ namespace rpgc.Syntax
                 line = card.Line;
                 charPos = 0;
                 lineNo = card.LinePos;
+
+                // get last specification
+                prevSpec = Specification;
 
                 // setup line
                 tmp = line.PadRight(72);
@@ -1356,19 +1170,19 @@ namespace rpgc.Syntax
 
                 if (tmp.Contains(";") == true && doFreeBlock == false)
                 {
-                    location = new TextLocation(source, new TextSpan(0,0, lineNo, tmp.IndexOf(";")));
+                    location = new TextLocation(source, new TextSpan(0, 0, lineNo, tmp.IndexOf(";")));
                     diagnostics.reportSemiColonInFixedFormat(location, lineNo, tmp.IndexOf(";"));
-                    ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SEMI, lineNo, tmp.IndexOf(";"), ";", lineNo));
+                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SEMI, lineNo, tmp.IndexOf(";"), ";", lineNo));
                 }
 
                 // perform free block
-                if (tmp.Substring(0,7).Contains("/FREE") == true)
+                if (tmp.Substring(0, 7).Contains("/FREE") == true)
                 {
                     doFreeBlock = true;
                     isInFreeTag = true;
                     continue;
                 }
-                if (tmp.Substring(0,11).Contains("/END-FREE") == true)
+                if (tmp.Substring(0, 11).Contains("/END-FREE") == true)
                 {
                     doFreeBlock = false;
                     isInFreeTag = false;
@@ -1381,26 +1195,54 @@ namespace rpgc.Syntax
                     continue;
                 }
 
+                // set main procedure setup flags
+                if (doAddMainFunciton == true)
+                {
+                    if (doAddMainProcSrt == true && prevSpec != 'C' && Specification == 'C')
+                    {
+                        // add starting half of the HIDDEN main procedure
+                        doAddMainProcSrt = false;
+                        ret.AddRange(SyntaxFacts.prepareMainFunction(st, TokenKind.TK_NEWLINE, true));
+                    }
+                    else
+                    {
+                        // set flag to add ending part of the main procedure
+                        // see end of the loop
+                        if (doAddMainProcSrt == false && " C".Contains(prevSpec) && Specification != 'C')
+                        {
+                            doAddMainProcEnd = true;
+                        }
+                    }
+                }
+
+                // add hidden main procedure
+                if (doAddMainFunciton == true && doAddMainProcEnd == true && doAddMainProcSrt == false)
+                {
+                    doAddMainProcEnd = false;
+                    doAddMainFunciton = false;
+                    ret.AddRange(SyntaxFacts.prepareMainFunction(st, TokenKind.TK_NEWLINE, false));
+                }
 
                 // begin decimation
                 switch (Specification)
                 {
                     case 'H':
                         lst = decimateHSpec(lineNo, tmp);
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
                         break;
                     case 'F':
                         lst = decimateFSpec(lineNo, tmp);
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
                         break;
                     case 'D':
                         lst = decimateDSpec(lineNo, tmp);
                         ret.AddRange(dSpecRectifier(lst));
                         break;
                     case 'I':
-                        ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, linePos, 0, "", 1));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, linePos, 0, "", 1));
                         break;
                     case 'C':
+
                         if (inDecareBlock == true)
                         {
                             ret.AddRange(getEndInterfaceOrPrototype());
@@ -1429,22 +1271,22 @@ namespace rpgc.Syntax
                         {
                             // at the start of indicator control insert an if block
                             if (localTokenLst.Count == 0)
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IF, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_IF, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
 
                             // add a AND/ OR token if needed
                             switch (lst[0].symbol)
                             {
                                 case "AN":
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_AND, lst[0].linePos, (lst[0].chrPos), "AN", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_AND, lst[0].linePos, (lst[0].chrPos), "AN", lst[0].chrPos));
                                     break;
                                 case "OR":
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_OR, lst[0].linePos, (lst[0].chrPos), "OR", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_OR, lst[0].linePos, (lst[0].chrPos), "OR", lst[0].chrPos));
                                     break;
                                 case "":
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_SPACE, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
                                     break;
                                 default:
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[0].linePos, (lst[0].chrPos), "", lst[0].chrPos));
                                     break;
                             }
 
@@ -1452,13 +1294,13 @@ namespace rpgc.Syntax
                             switch (lst[1].symbol)
                             {
                                 case "N":
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NOT, lst[0].linePos, (lst[1].chrPos), "N", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_NOT, lst[0].linePos, (lst[1].chrPos), "N", lst[0].chrPos));
                                     break;
                                 case "":
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, lst[0].linePos, (lst[1].chrPos), "", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_SPACE, lst[0].linePos, (lst[1].chrPos), "", lst[0].chrPos));
                                     break;
                                 default:
-                                    localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lst[0].linePos, (lst[1].chrPos), "", lst[0].chrPos));
+                                    localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[0].linePos, (lst[1].chrPos), "", lst[0].chrPos));
                                     break;
                             }
 
@@ -1468,8 +1310,8 @@ namespace rpgc.Syntax
                             {
                                 lst[2].symbol = $"*IN{lst[2].symbol}";
                                 localTokenLst.AddRange(doLex(lst[2]));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_EQ, lst[2].linePos, (lst[2].chrPos), "", lst[2].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_INDOFF, lst[2].linePos, (lst[2].chrPos), "", lst[2].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_EQ, lst[2].linePos, (lst[2].chrPos), "", lst[2].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_INDOFF, lst[2].linePos, (lst[2].chrPos), "", lst[2].chrPos));
                             }
 
                             // there is no op-code on this line go to next line and repeate this process
@@ -1478,13 +1320,13 @@ namespace rpgc.Syntax
                             else
                             {
                                 // compleate hidden goto statement
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_GOTO, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, lst[0].linePos, lst[0].chrPos, $"^^ITag{ITagCnt}", lst[0].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ENDIF, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
-                                localTokenLst.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_GOTO, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, lst[0].chrPos, $"^^ITag{ITagCnt}", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_ENDIF, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                localTokenLst.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
 
                                 // merge tokens to main list
                                 ret.AddRange(localTokenLst);
@@ -1493,9 +1335,9 @@ namespace rpgc.Syntax
 
                                 // add ending tag and clear control indicators
                                 tmp = $"^^ITag{ITagCnt}";
-                                ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_TAG, lst[0].linePos, (lst[0].chrPos), "TAG", tmp, lst[0].chrPos));
-                                ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), tmp, lst[0].chrPos));
-                                ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_TAG, lst[0].linePos, (lst[0].chrPos), "TAG", tmp, lst[0].chrPos));
+                                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), tmp, lst[0].chrPos));
+                                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
                                 localTokenLst.Clear();
 
                                 ITagCnt += 1;
@@ -1511,7 +1353,7 @@ namespace rpgc.Syntax
                             // set cascade operation symbol [cascadeOp] will have a value only for IF and DO bocks
                             cascadeOp = lst[4].symbol;
                             if (SyntaxFacts.cascadeBlockStart(cascadeOp) == true)
-                                cascadeOp = cascadeOp.Substring(0,2);
+                                cascadeOp = cascadeOp.Substring(0, 2);
                             else
                                 cascadeOp = "";
 
@@ -1522,8 +1364,8 @@ namespace rpgc.Syntax
                                 // add block start token if needed
                                 if (ret[ret.Count - 1].kind != TokenKind.TK_BLOCKSTART)
                                 {
-                                    ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, 0, 0, "", lst[0].chrPos));
-                                    ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, 0, 0, cascadeOp, lst[0].chrPos));
+                                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, 0, 0, "", lst[0].chrPos));
+                                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, 0, 0, cascadeOp, lst[0].chrPos));
                                 }
                                 cascadeOp = "";
                             }
@@ -1545,14 +1387,14 @@ namespace rpgc.Syntax
                         ret.AddRange(cSpecRectifier(lst));
                         break;
                     case 'O':
-                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
+                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
                         break;
                     case 'P':
                         lst = decimatePSpec(lineNo, tmp);
                         ret.AddRange(pSpecRectifier(lst));
                         break;
                     default:
-                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
+                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
                         break;
                 }
             }
@@ -2008,6 +1850,14 @@ namespace rpgc.Syntax
                             location = new TextLocation(source, new TextSpan(0,0, OP.linePos, OP.chrPos));
                             diagnostics.reportOpCodeNotAlone(location, OP.linePos, OP.chrPos, OP.symbol);
                         }
+                        break;
+                    case "CAT":
+                        ret.AddRange(doLex(RESULT));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, RESULT.linePos, (RESULT.chrPos), OpCode, RESULT.chrPos));
+                        ret.AddRange(doLex(FAC1));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ADD, OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                        ret.AddRange(doLex(FAC2));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
                     case "MOVE":
                         ret.AddRange(doLex(RESULT));

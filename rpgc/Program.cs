@@ -29,8 +29,8 @@ namespace rpgc
                 /*
                 */
                 //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\test4.rpg" };
-                string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\RPMult2.rpg" };
-                //string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\RPMult2.rpgle" };
+                //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\RPMult2.rpg" };
+                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\test8.rpg" };
                 doCompile(ar);
             }
             else
@@ -45,10 +45,10 @@ namespace rpgc
                     text = File.ReadAllText(paths);
                     fnam = Path.GetFileName(paths);
                     st = SyntaxTree.Parse(text, fnam);
-                    
+
                     //st.ROOT.writeTo(Console.Out);
 
-                    _compilation = new Complation(st);
+                    _compilation = Complation.Create(st);
                     res = _compilation.evalate(new Dictionary<VariableSymbol, object>());
 
                     // display diagnostics if any
@@ -118,7 +118,7 @@ namespace rpgc
                 Console.ResetColor();
             }
 
-            _compilation = new Complation(sTrees.ToArray());
+            _compilation =  Complation.Create(sTrees.ToArray());
             res = _compilation.evalate(new Dictionary<VariableSymbol, object>());
 
             // display diagnostics if any

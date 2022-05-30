@@ -706,10 +706,24 @@ namespace rpgc.Syntax
             if (functionReturns.ContainsKey(curSubroutineScope))
             {
                 funcReturns = functionReturns[curSubroutineScope];
-                if (SyntaxFacts.lookupTypeName(retExp.kind.GetTypeCode().ToString()) != SyntaxFacts.lookupTypeName(funcReturns))
+
+                // check for lone retrun statements
+                if (retExp == null) 
                 {
-                    diagnostics.reportReturnTypeMismatch(retExp.Location(), retExp.kind.GetTypeCode().ToString(), funcReturns);
-                    return new ErrorStatementSyntax(_sTree);
+                    if (funcReturns != "")
+                    {
+                        diagnostics.reportProcedureSouldNotReturnVoid(keyword.Location(), funcReturns);
+                        return new ErrorStatementSyntax(_sTree);
+                    }
+                }
+                else
+                {
+                    // check for type mismatch
+                    if (SyntaxFacts.lookupTypeName(retExp.kind.GetTypeCode().ToString()) != SyntaxFacts.lookupTypeName(funcReturns))
+                    {
+                        diagnostics.reportReturnTypeMismatch(retExp.Location(), retExp.kind.GetTypeCode().ToString(), funcReturns);
+                        return new ErrorStatementSyntax(_sTree);
+                    }
                 }
             }
 
@@ -741,13 +755,10 @@ namespace rpgc.Syntax
         // /////////////////////////////////////////////////////////////////////////
         private StatementSyntax parseVariableDeclaration()
         {
-            TokenKind expected;
             SyntaxToken keyworkd, identifier, initKeyWord, varType;
             ExpresionSyntax initilize;
             TypeClauseSyntax typClas;
             TypeSymbol ts = null;
-
-            expected = TokenKind.TK_VARDECLR;
 
             // get declaration symbol and variable name
             // dcl-s name
@@ -759,44 +770,6 @@ namespace rpgc.Syntax
             if (identifier.kind != TokenKind.TK_IDENTIFIER)
                 return new VariableDeclarationSyntax(_sTree, keyworkd, identifier, TypeSymbol.ERROR, null, null);
 
-            // get expected type
-            /*
-            switch (current.kind)
-            {
-                case TokenKind.TK_INTEGER:
-                    ts = TypeSymbol.Integer;
-                    expected = current.kind;
-                    break;
-                case TokenKind.TK_INDICATOR:
-                    ts = TypeSymbol.Indicator;
-                    expected = current.kind;
-                    break;
-                case TokenKind.TK_DATE:
-                    ts = TypeSymbol.Date;
-                    expected = current.kind;
-                    break;
-                case TokenKind.TK_DATETIME:
-                    ts = TypeSymbol.DateTime;
-                    expected = current.kind;
-                    break;
-                case TokenKind.TK_ZONED:
-                    ts = TypeSymbol.Integer;
-                    expected = current.kind;
-                    break;
-                case TokenKind.TK_PACKED:
-                    ts = TypeSymbol.Integer;
-                    expected = current.kind;
-                    break;
-                case TokenKind.TK_STRING:
-                    ts = TypeSymbol.Char;
-                    expected = current.kind;
-                    break;
-                default:
-                    ts = TypeSymbol.ERROR;
-                    break;
-            }
-            //varType = match(expected);
-            */
             typClas = parseTypeClause();
 
             // add varialbe initilizer if any
@@ -926,6 +899,7 @@ namespace rpgc.Syntax
             StatementSyntax body;
             TokenKind procToken;
             bool isSub;
+            string functionName;
 
             isSub = (current.sym.ToString() == "BEGSR");
             funcDclar = match(TokenKind.TK_PROCDCL);
@@ -949,8 +923,9 @@ namespace rpgc.Syntax
                     if (identifier.kind == TokenKind.TK_BADTOKEN)
                         return new ErrorMemberSyntax(_sTree);
 
+                    functionName = pocInterfaceName.sym.ToString().ToUpper();
                     // check if procedure name matches interface name
-                    if (pocInterfaceName.sym.ToString() != curSubroutineScope && pocInterfaceName.sym.ToString() != "*N")
+                    if (functionName != curSubroutineScope && functionName != "*N")
                     {
                         diagnostics.reportProcedureNameMismatch(pocInterfaceName.Location(), curSubroutineScope);
                         return new ErrorMemberSyntax(_sTree);

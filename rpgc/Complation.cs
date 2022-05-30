@@ -10,25 +10,55 @@ using rpgc.Syntax;
 using System.Collections.Immutable;
 using System.IO;
 using rpgc.Lowering;
+using rpgc.Symbols;
 
 namespace rpgc
 {
     public class Complation
     {
         public ImmutableArray<SyntaxTree> SyntaxTrees { get; }
+        public Complation Previous { get; }
+        public bool IsScript { get; } 
         private DiagnosticBag diognost = new DiagnosticBag();
         private BoundGlobalScope _globalScope;
-        private Complation previous;
 
+        /*
         public Complation(params SyntaxTree[] tree) : this(null, tree)
         {
         }
+        */
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
-        private Complation(Complation prev, params SyntaxTree[] trees)
+        private Complation(bool isScript, Complation prev, params SyntaxTree[] trees)
         {
             SyntaxTrees = trees.ToImmutableArray();
-            previous = prev;
+            Previous = prev;
+            IsScript = isScript;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        public static Complation Create(params SyntaxTree[] trees)
+        {
+            return new Complation(false, null, trees);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        public static Complation CreateScript(Complation prev, params SyntaxTree[] trees)
+        {
+            return new Complation(true, prev, trees);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        private BoundProgram getProgram()
+        {
+            BoundProgram perv;
+
+            if (Previous == null)
+                perv = null;
+            else
+                perv = Previous.getProgram();
+
+            return Binder.BindProgram(IsScript, perv, globalScope_);
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,7 +77,7 @@ namespace rpgc
                         gs = null;
                     */
 
-                    gs = Binder.bindGlobalScope(previous?.globalScope_, SyntaxTrees);
+                    gs = Binder.bindGlobalScope(IsScript, Previous?.globalScope_, SyntaxTrees);
                     //gs = Binder.bindGlobalScope(gs, Syntax.ROOT);
                     Interlocked.CompareExchange(ref _globalScope, gs, null);
                 }
@@ -58,11 +88,37 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////////////////////////////////////
         internal void emitTree(TextWriter writer)
         {
-            BoundStatement stmnt = getStatement();
-            _globalScope.Statement.writeTo(writer);
+            var pgm = getProgram();
+
+            if (_globalScope.MainFunction != null)
+            {
+                emitTree(_globalScope.MainFunction, writer);
+            }
+            else
+            {
+                if(_globalScope.ScriptFunciton != null)
+                    emitTree(_globalScope.ScriptFunciton, writer);
+            }
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
+        internal void emitTree(FunctionSymbol symbol,TextWriter writer)
+        {
+            BoundProgram program = getProgram();
+            BoundBlockStatement body;
+
+            symbol.writeTo(writer);
+            writer.WriteLine();
+
+            if (program.Functions.TryGetValue(symbol, out body) == false)
+                return;
+
+            body.writeTo(writer);
+        }
+
+
+        // //////////////////////////////////////////////////////////////////////////////////////////////
+        /*
         private BoundBlockStatement getStatement()
         {
             //BoundStatement stmnt;
@@ -73,11 +129,19 @@ namespace rpgc
 
             return flattend;
         }
+        */
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
+        /*
         public Complation continueWith(SyntaxTree tree)
         {
             return new Complation(this, tree);
+        }
+        */
+
+        FunctionSymbol MainFunction()
+        {
+            return globalScope_.MainFunction;
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,6 +152,8 @@ namespace rpgc
             BoundProgram program;
             Evaluator eval;
             object value;
+            string appPath, appDir, cfgFlags;
+            ControlFlowGraph cfg;
             IEnumerable<Diagnostics> parseDiagno;
 
             // collect all diagnostics from all syntax trees
@@ -99,15 +165,27 @@ namespace rpgc
             if (diognos.Any())
                 return new EvaluationResult(diognos, null);
 
-            program = Binder.BindProgram(globalScope_);
+            program = getProgram();
+
 
             diognos = program.Diagnostics;
             if (diognos.Any())
                 return new EvaluationResult(diognos, null);
 
-            st = getStatement();
-            eval = new Evaluator(program.FunctionBodies, st, _variables);
-            //eval = new Evaluator(st, _variables);
+            BoundStatement[] xtn = (from vars in program.GblScope.Statements
+                       where vars.tok == BoundNodeToken.BNT_VARDECLR
+                       select vars).ToArray();
+
+
+            foreach (boundVariableDeclaration vrs in xtn)
+            {
+                _variables.Add(vrs.Variable, vrs.Initalizer);
+            }
+
+            //st = getStatement();
+            eval = new Evaluator(program, _variables);
+            //eval = new Evaluator(program.FunctionBodies, st, _variables);
+            ////eval = new Evaluator(st, _variables);
             value = eval.Evaluate();
 
             return new EvaluationResult(ImmutableArray<Diagnostics>.Empty, value);

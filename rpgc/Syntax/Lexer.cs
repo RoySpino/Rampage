@@ -14,17 +14,17 @@ namespace rpgc.Syntax
         bool doFreeLex = false;
 
         SourceText source;
-        string tmpVal, tmpSpcl;
+        string tmpVal;
         int pos, lineNum, sSize, peekPos;
         char curChar;
         DiagnosticBag diagnostics = new DiagnosticBag();
-        bool onEvalLine = true;
+        bool onEvalLine = true, doAddMainFunciton, doAddMainProcEnd, doAddMainProcSrt;
         List<SyntaxToken> strucLexLine = new List<SyntaxToken>();
         int parenCnt = 0, linePos;
         string lineType = "";
         bool doDecmiation;
         List<string> sourceLines = new List<string>();
-        bool isProcSection = false, inDBlock = false;
+        bool isProcSection = false, inDBlock = false, hasMain = false;
         private string specChkStr;
         List<StructCard> lineFeeder = new List<StructCard>();
         string currentSub;
@@ -46,8 +46,12 @@ namespace rpgc.Syntax
             lineNum = 1;
             sSize = source.Length;
             doDecmiation = true;
+            doAddMainFunciton = false;
+            doAddMainProcEnd = false;
+            doAddMainProcSrt = false;
             prevLine = -1;
             specChkStr = "CTL-OPT";
+            
 
             nextChar();
         }
@@ -85,6 +89,19 @@ namespace rpgc.Syntax
             // within the main procedure AND spec are not the same 
             if (isProcSection == false)
             {
+                if (doAddMainFunciton == true)
+                {
+                    // start of the C specificaton
+                    // first line is a main funciton
+                    if (mainDic[curSpec] == 4 && mainDic[specChkStr] == 3)
+                        doAddMainProcSrt = true;
+
+                    // at the end of the C spec and starting O or P
+                    // compleate the end procedure
+                    if (mainDic[curSpec] > 4 && mainDic[specChkStr] == 3)
+                        doAddMainProcEnd = true;
+                }
+
                 if (mainDic[curSpec] >= mainDic[specChkStr])
                 {
                     // start of procedure section reset to D and return true
@@ -270,8 +287,9 @@ namespace rpgc.Syntax
             MatchCollection mth;
             SyntaxToken tmpTok;
             bool Ft, Hv, Em;
-            bool isEOIInList;
+            bool isEOIInList, isIBMSource;
 
+            isIBMSource = false;
             Ft = (doDecmiation == true);
             Hv = (strucLexLine.Count > 0);
             Em = (sourceLines.Count == 0);
@@ -293,12 +311,11 @@ namespace rpgc.Syntax
                     sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
                     //sorc = sorc.Substring(0, sorc.Length - 1);
                     arr = sorc.Split('¶');
+                    isIBMSource = SyntaxFacts.isIBMDoc(arr);
                     originalSrucLinesCount = arr.Length;
 
                     // save array as list
                     sourceLines = new List<string>(arr);
-
-                    strucLexLine = Decimator.performCSpecVarDeclar(arr);
                 }
 
 
@@ -307,13 +324,17 @@ namespace rpgc.Syntax
                 for (int i = 0; i < sourceLines.Count(); i++)
                 {
                     // get a line and capatilize all letters but not the strings
-                    line = SyntaxFacts.normalizeLine(sourceLines[i]);
+                    line = SyntaxFacts.normalizeLine(sourceLines[i], isIBMSource);
 
                     // remove comments and add line to list
                     line = SyntaxFacts.normalizeComments(line);
 
+                    sourceLines[i] = line;
                     lineFeeder.Add(new StructCard(line, (i + 1)));
                 }
+
+                // get inline declares
+                strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
 
                 // generate a list of tokens from the soruce code
                 strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
@@ -342,30 +363,34 @@ namespace rpgc.Syntax
             char chr = '^';
             int idx = 0;
 
-            // get the symbol
-            while (chr >= ' ')
+            // -------------------------------------------------------------------------------------------------
+            // check if using free format
+            if (pos == 0 && curChar == '*' && peek(1) == '*')
             {
-                chr = peek(idx);
-                sb.Append(chr);
-                idx += 1;
-            }
+                // get the symbol
+                while (chr >= ' ')
+                {
+                    chr = peek(idx);
+                    sb.Append(chr);
+                    idx += 1;
+                }
 
-            // convert symbol to upercase string
-            vlu = sb.ToString().ToUpper().Trim();
+                // convert symbol to upercase string
+                vlu = sb.ToString().ToUpper().Trim();
 
-            // check if result is the FREE simble
-            if (vlu == "**FREE")
-            {
-                // advanc character position
-                for (int i = 0; i < 6; i++)
-                    nextChar();
-                return true;
+                // check if result is the FREE simble
+                if (vlu == "**FREE")
+                {
+                    // advanc character position
+                    for (int i = 0; i < 6; i++)
+                        nextChar();
+                    return true;
+                }
             }
 
             // FREE symbol was not found
             return false;
         }
-
 
         // ////////////////////////////////////////////////////////////////////////////////////
         public SyntaxToken doLex()
@@ -955,6 +980,131 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
+        public List<SyntaxToken> getLexTokenList(SyntaxTree _sTree)
+        {
+            SyntaxToken tok;
+            List<SyntaxToken> ret;
+
+            ret = new List<SyntaxToken>();
+
+            if (checkFree() == false)
+                return doStructLex2();
+
+            // get tokens
+            do
+            {
+                // get token
+                tok = doLex();
+
+                // add hidden main procedure
+                if (doAddMainFunciton == true)
+                {
+                    if (doAddMainProcSrt == true)
+                    {
+                        doAddMainProcSrt = false;
+                        ret.AddRange(SyntaxFacts.prepareMainFunction(_sTree, TokenKind.TK_SEMI, true));
+                    }
+                    if (doAddMainProcEnd == true)
+                    {
+                        doAddMainProcEnd = false;
+                        doAddMainFunciton = false;
+                        ret.AddRange(SyntaxFacts.prepareMainFunction(_sTree, TokenKind.TK_SEMI, false));
+                    }
+                }
+
+                // special case for else add block end befor else
+                if (tok.kind == TokenKind.TK_ELSE)
+                    ret.Add(new SyntaxToken(_sTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
+
+                // save avalable tokens skipping nulls and space
+                if (tok == null || tok.kind == TokenKind.TK_SPACE || tok.kind == TokenKind.TK_BADTOKEN)
+                    continue;
+
+                ret.Add(tok);
+            }
+            while (tok.kind != TokenKind.TK_EOI);
+
+            return ret;
+        }
+
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        public List<SyntaxToken> doStructLex2()
+        {
+            string line = "", sorc;
+            string[] arr;
+            SyntaxToken tmpTok;
+            bool Ft, Hv, Em;
+            bool isEOIInList, isIBMSource;
+
+            isIBMSource = false;
+            Ft = (doDecmiation == true);
+            Hv = (strucLexLine.Count > 0);
+            Em = (sourceLines.Count == 0);
+
+            // ----------------------------------------------------------------
+            // THIS IF BLOCK EXECUTES ONLY ONCE
+            // If block only executes when
+            // Ft: On the First Time run or 
+            // Hv: the list strucLexLine has elements (Has a value) or 
+            // Em: sourceLines is not empty
+            if (Ft == true || (Hv == false && Em == false))
+            {
+                // do this only once 
+                // create a list of lines
+                if (doDecmiation == true)
+                {
+                    doDecmiation = false;
+
+                    sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
+                    //sorc = sorc.Substring(0, sorc.Length - 1);
+                    arr = sorc.Split('¶');
+                    isIBMSource = SyntaxFacts.isIBMDoc(arr);
+                    originalSrucLinesCount = arr.Length;
+
+                    // save array as list
+                    sourceLines = new List<string>(arr);
+                }
+
+
+                lineFeeder = new List<StructCard>();
+
+                for (int i = 0; i < sourceLines.Count(); i++)
+                {
+                    // get a line and capatilize all letters but not the strings
+                    line = SyntaxFacts.normalizeLine(sourceLines[i], isIBMSource);
+
+                    // remove comments and add line to list
+                    line = SyntaxFacts.normalizeComments(line);
+
+                    sourceLines[i] = line;
+                    lineFeeder.Add(new StructCard(line, (i + 1)));
+                }
+
+                // get inline declares
+                strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
+
+                // generate a list of tokens from the soruce code
+                strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
+
+                // check if there is a EOI token in the token list
+                isEOIInList = (from tkn in strucLexLine
+                               select tkn.kind == TokenKind.TK_EOI).FirstOrDefault();
+                if (isEOIInList == false)
+                    strucLexLine.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_EOI, 1, 0, originalSrucLinesCount, 0));
+            }
+            // ----------------------------------------------------------------
+
+            // treat list like a que when the lexer is called
+            // pop the first element from the token list and return it
+            tmpTok = strucLexLine[0];
+            strucLexLine.RemoveAt(0);
+
+            return strucLexLine;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+
         public DiagnosticBag getDiagnostics()
         {
             return diagnostics;

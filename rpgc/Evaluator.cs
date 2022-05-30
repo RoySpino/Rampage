@@ -11,17 +11,45 @@ namespace rpgc
 {
     internal sealed class Evaluator
     {
+        private readonly BoundProgram program;
         private readonly BoundBlockStatement ROOT;
+        private readonly BoundGlobalScope globals;
         Dictionary<VariableSymbol, object> _Globals;
+        Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
         private object lastValue;
         private Random randnum;
         private readonly ImmutableDictionary<FunctionSymbol, BoundBlockStatement> FunctionBodies;
 
+
+        public Evaluator(BoundProgram pgm, Dictionary<VariableSymbol, object> _variables)
+        {
+            BoundProgram c;
+
+            program = pgm;
+            _Globals = _variables;
+            _locals.Push(new Dictionary<VariableSymbol, object>());
+            globals = pgm.GblScope;
+
+            // step through all funcitons and 
+            c = program;
+            while (c != null)
+            {
+                foreach (var fn in c.Functions)
+                {
+                    _functions.Add(fn.Key, fn.Value);
+                }
+                c = c.Previous;
+            }
+        }
+
         public Evaluator(BoundBlockStatement root, Dictionary<VariableSymbol, object> _variables)
         {
+            program = null;
             ROOT = root;
             _Globals = _variables;
+
+            var c = program;
         }
 
         public Evaluator(ImmutableDictionary<FunctionSymbol, BoundBlockStatement> _functionBodies, BoundBlockStatement st, Dictionary<VariableSymbol, object> variables)
@@ -32,7 +60,7 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////
-        private bool DoComparison(string Operation, Type TL, Type TR, object L, object R)
+        private bool DoComparison(string Operation, object LT0, object TR0, object L, object R)
         {
             int intL, intR;
             string strL, strR;
@@ -40,7 +68,7 @@ namespace rpgc
             DateTime datL, datR;
 
 
-            if (TL == typeof(int))
+            if (LT0.GetType() == typeof(int))
             {
                 intL = Convert.ToInt32(L);
                 intR = Convert.ToInt32(R);
@@ -59,7 +87,7 @@ namespace rpgc
             }
             else
             {
-                if (TL == typeof(double))
+                if (LT0.GetType() == typeof(double) || LT0.GetType() == typeof(float))
                 {
                     douL = Convert.ToDouble(L);
                     douR = Convert.ToDouble(R);
@@ -78,7 +106,7 @@ namespace rpgc
                 }
                 else
                 {
-                    if (TL == typeof(string))
+                    if (LT0.GetType() == typeof(string))
                     {
                         strL = L.ToString();
                         strR = R.ToString();
@@ -147,6 +175,8 @@ namespace rpgc
         {
             var value = evaluateExpression(node._Expression);
 
+            if (node.Type == TypeSymbol.Any)
+                return value;
             if (node.Type == TypeSymbol.Indicator)
                 return Convert.ToBoolean(value);
             if (node.Type == TypeSymbol.Integer)
@@ -169,7 +199,7 @@ namespace rpgc
             object value;
             int operand;
 
-            var chameleonOBJ = evaluateExpression(uiTmp.right);
+            var chameleonOBJ = reEvaluate(uiTmp.right);
 
             // convert to neg or positive
             switch (uiTmp.OP.tok)
@@ -193,14 +223,30 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        object reEvaluate(object exp)
+        {
+            object output;
+
+            output = exp;
+
+            if (output is BoundExpression)
+            {
+                output = evaluateExpression((BoundExpression)output);
+                return reEvaluate(output);
+            }
+
+            return output;
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         private object evaluateBoundBinaryExpression(BoundBinExpression biTmp)
         {
             object chameleonOBJL;
             object chameleonOBJR;
             object ans;
 
-            chameleonOBJL = evaluateExpression(biTmp.Left);
-            chameleonOBJR = evaluateExpression(biTmp.Right);
+            chameleonOBJL = reEvaluate(biTmp.Left);
+            chameleonOBJR = reEvaluate(biTmp.Right);
 
             switch (biTmp.OP.tok)
             {
@@ -233,16 +279,16 @@ namespace rpgc
                     ans = !Equals(chameleonOBJL, chameleonOBJR);
                     break;
                 case BoundBinOpToken.BBO_GE:
-                    ans = DoComparison(">=", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    ans = DoComparison(">=", chameleonOBJL, chameleonOBJR, chameleonOBJL, chameleonOBJR);
                     break;
                 case BoundBinOpToken.BBO_GT:
-                    ans = DoComparison(">", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    ans = DoComparison(">", chameleonOBJL, chameleonOBJR, chameleonOBJL, chameleonOBJR);
                     break;
                 case BoundBinOpToken.BBO_LE:
-                    ans = DoComparison("<=", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    ans = DoComparison("<=", chameleonOBJL, chameleonOBJR, chameleonOBJL, chameleonOBJR);
                     break;
                 case BoundBinOpToken.BBO_LT:
-                    ans = DoComparison("<", chameleonOBJL.GetType(), chameleonOBJR.GetType(), chameleonOBJL, chameleonOBJR);
+                    ans = DoComparison("<", chameleonOBJL, chameleonOBJR, chameleonOBJL, chameleonOBJR);
                     break;
                 default:
                     throw new Exception(string.Format("unexpected Binary operator {0}", biTmp.OP.tok));
@@ -260,19 +306,19 @@ namespace rpgc
                 return Console.ReadLine();
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.cout)
             {
-                string msg = evaluateExpression((node.Arguments[0])).ToString();
+                string msg = reEvaluate((node.Arguments[0])).ToString();
                 Console.WriteLine(msg);
                 return null;
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.dsply)
             {
-                string msg = evaluateExpression((node.Arguments[0])).ToString();
+                string msg = reEvaluate((node.Arguments[0])).ToString();
                 Console.WriteLine(msg);
                 return null;
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Int)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 try
                 {
                     return Convert.ToInt32(Val);
@@ -284,55 +330,55 @@ namespace rpgc
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_char)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return Val;
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Log)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return (int)Math.Log(Convert.ToDouble(Val));
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Log10)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return (int)(Math.Log(Convert.ToDouble(Val)) / Math.Log(10.0));
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_abs)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return (int)Math.Abs(Convert.ToDouble(Val));
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Sqrt)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return (int)Math.Sqrt(Convert.ToDouble(Val));
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rem)
             {
-                string Val0 = evaluateExpression((node.Arguments[0])).ToString();
-                string Val1 = evaluateExpression((node.Arguments[1])).ToString();
+                string Val0 = reEvaluate((node.Arguments[0])).ToString();
+                string Val1 = reEvaluate((node.Arguments[1])).ToString();
                 return (int)((Convert.ToDouble(Val0) % Convert.ToDouble(Val1)));
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Len)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return Val.Length;
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Lower)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return Val.ToLower();
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Upper)
             {
-                string Val = evaluateExpression((node.Arguments[0])).ToString();
+                string Val = reEvaluate((node.Arguments[0])).ToString();
                 return Val.ToUpper();
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Subst)
             {
-                string Val0 = evaluateExpression((node.Arguments[0])).ToString();
-                string Val1 = evaluateExpression((node.Arguments[1])).ToString();
-                string Val2 = evaluateExpression((node.Arguments[2])).ToString();
+                string Val0 = reEvaluate((node.Arguments[0])).ToString();
+                string Val1 = reEvaluate((node.Arguments[1])).ToString();
+                string Val2 = reEvaluate((node.Arguments[2])).ToString();
                 string result;
                 int sidx, len;
 
@@ -345,7 +391,7 @@ namespace rpgc
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rand)
             {
                 int max;
-                string Val0 = evaluateExpression((node.Arguments[0])).ToString();
+                string Val0 = reEvaluate((node.Arguments[0])).ToString();
 
                 if (randnum == null)
                     randnum = new Random();
@@ -355,15 +401,15 @@ namespace rpgc
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_div)
             {
-                int Val0 = Convert.ToInt32(evaluateExpression((node.Arguments[0])));
-                int Val1 = Convert.ToInt32(evaluateExpression((node.Arguments[1])));
+                int Val0 = Convert.ToInt32(reEvaluate((node.Arguments[0])));
+                int Val1 = Convert.ToInt32(reEvaluate((node.Arguments[1])));
 
                 return (int)(Val0 / Val1);
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Scan)
             {
-                string whatToFind = evaluateExpression((node.Arguments[0])).ToString();
-                string source = evaluateExpression((node.Arguments[1])).ToString();
+                string whatToFind = reEvaluate((node.Arguments[0])).ToString();
+                string source = reEvaluate((node.Arguments[1])).ToString();
                 int idx;
 
                 idx = source.IndexOf(whatToFind) + 1;
@@ -372,10 +418,10 @@ namespace rpgc
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Replace)
             {
-                string wrdValue = evaluateExpression((node.Arguments[0])).ToString();
-                string source = evaluateExpression((node.Arguments[1])).ToString();
-                int startIndex = Convert.ToInt32(evaluateExpression((node.Arguments[2])));
-                int length = Convert.ToInt32(evaluateExpression((node.Arguments[3])));
+                string wrdValue = reEvaluate((node.Arguments[0])).ToString();
+                string source = reEvaluate((node.Arguments[1])).ToString();
+                int startIndex = Convert.ToInt32(reEvaluate((node.Arguments[2])));
+                int length = Convert.ToInt32(reEvaluate((node.Arguments[3])));
                 string tmp;
 
                 tmp = wrdValue.Substring(0, length);
@@ -388,7 +434,7 @@ namespace rpgc
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Trim)
             {
-                string value = evaluateExpression((node.Arguments[0])).ToString();
+                string value = reEvaluate((node.Arguments[0])).ToString();
 
                 value = value.Trim();
                 return value;
@@ -398,9 +444,9 @@ namespace rpgc
                 string fromStr, toStr, source, res;
                 int lim;
 
-                fromStr = evaluateExpression((node.Arguments[0])).ToString();
-                toStr = evaluateExpression((node.Arguments[1])).ToString();
-                source = evaluateExpression((node.Arguments[2])).ToString();
+                fromStr = reEvaluate((node.Arguments[0])).ToString();
+                toStr = reEvaluate((node.Arguments[1])).ToString();
+                source = reEvaluate((node.Arguments[2])).ToString();
 
                 // get the smallest length as the limit
                 lim = fromStr.Length;
@@ -423,8 +469,8 @@ namespace rpgc
                 string fromStr, source;
                 int idx;
 
-                fromStr = evaluateExpression((node.Arguments[0])).ToString();
-                source = evaluateExpression((node.Arguments[1])).ToString();
+                fromStr = reEvaluate((node.Arguments[0])).ToString();
+                source = reEvaluate((node.Arguments[1])).ToString();
 
                 var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
                 idx = mtch.Index;
@@ -436,8 +482,8 @@ namespace rpgc
                 string fromStr, source;
                 int idx;
 
-                fromStr = evaluateExpression((node.Arguments[0])).ToString();
-                source = evaluateExpression((node.Arguments[1])).ToString();
+                fromStr = reEvaluate((node.Arguments[0])).ToString();
+                source = reEvaluate((node.Arguments[1])).ToString();
 
                 source.Reverse();
                 var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
@@ -449,17 +495,22 @@ namespace rpgc
             else
             {
                 // handle programmer defigned procedures/subrutines
-                var lcals = new Dictionary<VariableSymbol, object>();
+                ParamiterSymbol paramiter;
+                object vValue, result;
+                Dictionary<VariableSymbol, object> lcals;
+
+                lcals = new Dictionary<VariableSymbol, object>();
+
                 for (int i = 0; i < node.Arguments.Length; i++)
                 {
-                    var paramiter = node.Function.Paramiter[i];
-                    var vValue = evaluateExpression(node.Arguments[i]);
+                    paramiter = node.Function.Paramiter[i];
+                    vValue = reEvaluate(node.Arguments[i]);
                     lcals.Add(paramiter, vValue);
                 }
                 _locals.Push(lcals);
 
-                stmnt = FunctionBodies[node.Function];
-                var result = EvaluateStatment(stmnt);
+                stmnt = _functions[node.Function];
+                result = EvaluateStatment(stmnt);
 
                 _locals.Pop();
                 return result;
@@ -490,7 +541,7 @@ namespace rpgc
             object value;
             Dictionary<VariableSymbol, object> tmpLocalStack;
 
-            value = evaluateExpression(node.Initalizer);
+            value = reEvaluate(node.Initalizer);
             //_Globals[node.Variable] = value;
             lastValue = value;
 
@@ -511,7 +562,7 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////
         private void evaluateExpressionStatement(BoundExpressionStatement stmnt)
         {
-            lastValue = evaluateExpression(stmnt.Expression);
+            lastValue = reEvaluate(stmnt.Expression);
         }
 
         // //////////////////////////////////////////////////////////////////////////
@@ -521,19 +572,33 @@ namespace rpgc
             Dictionary<VariableSymbol, object> lcl;
             VariableSymbol idx;
 
+            idx = vtmp.Variable;
+            lcl = _locals.Peek();
+
+            // when searching for variables
+            // check local stack first before checking global stack
+            if (lcl.ContainsKey(idx) == true)
+            {
+                varb = lcl[idx];
+            }
+            else
+            {
+                varb = _Globals[idx];
+            }
+
             // get value from apropreate dictionary
+            /*
             switch (vtmp.Variable.kind)
             {
                 case SymbolKind.SYM_GLOBALVAR:
-                    idx = vtmp.Variable;
                     varb = _Globals[idx];
                     break;
                 default:
-                    idx = vtmp.Variable;
                     lcl = _locals.Peek();
                     varb = lcl[idx];
                     break;
             }
+            */
 
             return varb;
         }
@@ -545,7 +610,7 @@ namespace rpgc
             Dictionary<VariableSymbol, object> lcl;
 
             // get value
-            value = evaluateExpression(atmp.Expression);
+            value = reEvaluate(atmp.Expression);
 
             // assign value to apropreate dictionary
             performAssignment(atmp.Variable, value);
@@ -583,7 +648,7 @@ namespace rpgc
             if (s.Expression == null)
                 returnValue = null;
             else
-                returnValue = evaluateExpression(s.Expression);
+                returnValue = reEvaluate(s.Expression);
 
             return returnValue;
         }
@@ -629,7 +694,7 @@ namespace rpgc
                         break;
                     case BoundNodeToken.BNT_GOTOCOND:
                         cgts = (BoundGoToConditionalStatement)s;
-                        cond = (bool)evaluateExpression(cgts.Condition);
+                        cond = (bool)reEvaluate(cgts.Condition);
                         if ((cond == true && cgts.JumpIfFalse == false) || (cond == false && cgts.JumpIfFalse == true))
                         {
                             lblName = cgts.Label.Name;
@@ -660,7 +725,24 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////
         public object Evaluate()
         {
-            return EvaluateStatment(ROOT);
+            FunctionSymbol fn;
+            BoundBlockStatement body;
+
+            // get program
+            if (program.MainFunction != null)
+                fn = program.MainFunction;
+            else
+                fn = program.ScriptFunction;
+
+            // return nothing if thre is no program
+            if (fn == null)
+                return null;
+
+            // get main body
+            body = _functions[fn];
+
+            // evaly program
+            return EvaluateStatment(body);
         }
     }
 }
