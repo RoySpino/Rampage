@@ -639,6 +639,10 @@ namespace rpgc.Syntax
                         break;
                 }
 
+                // skip spaces
+                if (kind == TokenKind.TK_SPACE)
+                    continue;
+
                 ret.Add(new SyntaxToken(sTree_ ,kind, linePos, (start + factor_.chrPos), Value, start));
             }
 
@@ -1098,11 +1102,7 @@ namespace rpgc.Syntax
                     break;
             }
 
-            if (tk == TokenKind.TK_SPACE)
-            {
-                rarr.Add(new SyntaxToken(sTree_, tk, linePos, 1, "", 0));
-            }
-            else
+            if (tk != TokenKind.TK_SPACE)
             {
                 rarr.Add(new SyntaxToken(sTree_, tk, linePos, 1, "", 0));
                 rarr.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, 0, 0, "", 0));
@@ -1128,7 +1128,7 @@ namespace rpgc.Syntax
             bool doFreeBlock = false;
             char Specification;
             string tmp, line;
-            int charPos, lineNo;
+            int charPos, lineNo, cardLimit;
             string peekOp, cascadeOp = null;
             List<StructNode> lst;
             List<SyntaxToken> ret;
@@ -1138,11 +1138,12 @@ namespace rpgc.Syntax
             ret = new List<SyntaxToken>();
             source = txt;
             Specification = ' ';
+            cardLimit = cards.Count();
 
             // setup global diagnostic bag
             diagnostics = diag;
 
-            for (int i = 0; i < cards.Count(); i++)
+            for (int i = 0; i < cardLimit; i++)
             {
                 card = cards[i];
                 line = card.Line;
@@ -1207,20 +1208,13 @@ namespace rpgc.Syntax
                     else
                     {
                         // set flag to add ending part of the main procedure
-                        // see end of the loop
-                        if (doAddMainProcSrt == false && " C".Contains(prevSpec) && Specification != 'C')
-                        {
-                            doAddMainProcEnd = true;
-                        }
+                        // this is done at the end of this loop
+                        if (doAddMainProcSrt == false)
+                            if ((" C".Contains(prevSpec) && Specification != 'C') || (i + 1) == cardLimit)
+                            {
+                                doAddMainProcEnd = true;
+                            }
                     }
-                }
-
-                // add hidden main procedure
-                if (doAddMainFunciton == true && doAddMainProcEnd == true && doAddMainProcSrt == false)
-                {
-                    doAddMainProcEnd = false;
-                    doAddMainFunciton = false;
-                    ret.AddRange(SyntaxFacts.prepareMainFunction(st, TokenKind.TK_NEWLINE, false));
                 }
 
                 // begin decimation
@@ -1396,6 +1390,15 @@ namespace rpgc.Syntax
                     default:
                         ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
                         break;
+                }
+
+
+                // add hidden main procedure
+                if (doAddMainFunciton == true && doAddMainProcEnd == true && doAddMainProcSrt == false)
+                {
+                    doAddMainProcEnd = false;
+                    doAddMainFunciton = false;
+                    ret.AddRange(SyntaxFacts.prepareMainFunction(st, TokenKind.TK_NEWLINE, false));
                 }
             }
 

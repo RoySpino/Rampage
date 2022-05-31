@@ -36,6 +36,7 @@ namespace rpgc.Syntax
                                 "SHTDN","SORTA","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE"};
         private static string[] freeDecalres = { "DCL-C", "DCL-S", "DCL-PROC", "DCL-PI", "DCL-DS",
                                 "DCL-PR", "CTL-OPT","END-PROC", "END-PI", "END-PR", "END-DS","ON-ERROR"};
+        private static string[] dBlocks = { "DCL-DS", "DCL-PR", "DCL-PI", "END-DS", "END-PR", "END-PI" };
 
         private static string[] freeBIFWithNoParan = { "DSPLY", "SORTA", "COUT", "EXSR", "READ", "READE", "SETLL", "SETGT", "OPEN", "CLOSE", "READC", "DELETE", "WRITE", "UPDATE", "CHAIN", "CLEAR", "SORTA", "SUBDUR" };
         private static string[] BIIndicators = { "01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"
@@ -772,14 +773,12 @@ namespace rpgc.Syntax
             char ch;
             StringBuilder sbuild;
 
-            sbuild = new StringBuilder();
-            ret = line.ToCharArray();
 
             // cut out comments in traditinal IBM RPG
             if (doIBMLine == true)
             {
-                // cut out the first 5 chars
-                line = line.Substring(5);
+                if (line.Length > 4)
+                    line = line.Substring(5);
             }
 
             // if the line does not have a quote
@@ -787,6 +786,9 @@ namespace rpgc.Syntax
                 return line.ToUpper();
             else
             {
+                sbuild = new StringBuilder();
+                ret = line.ToCharArray();
+
                 // the line has a quote
                 foreach (char c  in ret)
                 {
@@ -806,6 +808,22 @@ namespace rpgc.Syntax
 
             return sbuild.ToString();
         }
+
+        // //////////////////////////////////////////////////////////////////////////////////
+        public static bool isInDBlock(string spec)
+        {
+            string res;
+
+            res = (from el in dBlocks
+                   where el == spec
+                   select el).FirstOrDefault();
+
+            if (res == null)
+                return false;
+
+            return true;
+        }
+
         // //////////////////////////////////////////////////////////////////////////////////
         public static string normalizeComments(string line)
         {

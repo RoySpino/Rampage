@@ -24,7 +24,7 @@ namespace rpgc.Syntax
         string lineType = "";
         bool doDecmiation;
         List<string> sourceLines = new List<string>();
-        bool isProcSection = false, inDBlock = false, hasMain = false;
+        bool isProcSection = false;
         private string specChkStr;
         List<StructCard> lineFeeder = new List<StructCard>();
         string currentSub;
@@ -32,6 +32,7 @@ namespace rpgc.Syntax
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         private SyntaxTree _SyntaxTree;
         private int originalSrucLinesCount;
+        private List<SyntaxToken> MainProcedureInterface = new List<SyntaxToken>();
 
         int start;
         TokenKind kind;
@@ -40,15 +41,15 @@ namespace rpgc.Syntax
         public Lexer(SyntaxTree stree)
         {
             _SyntaxTree = stree;
-            source = _SyntaxTree.TEXT;
+            source = stree.TEXT;
+            sSize = source.Length;
+            doDecmiation = true;
+            doAddMainFunciton = true;
+            doAddMainProcEnd = false;
+            doAddMainProcSrt = false;
             pos = -1;
             linePos = 0;
             lineNum = 1;
-            sSize = source.Length;
-            doDecmiation = true;
-            doAddMainFunciton = false;
-            doAddMainProcEnd = false;
-            doAddMainProcSrt = false;
             prevLine = -1;
             specChkStr = "CTL-OPT";
             
@@ -76,7 +77,7 @@ namespace rpgc.Syntax
             // assign D or C spec
             if (mainDic.ContainsKey(curSpec) == false)
             {
-                if (mainDic[specChkStr] == 3)
+                if (SyntaxFacts.isInDBlock(specChkStr))
                     curSpec = "DCL-S";
                 else
                     curSpec = "C";
@@ -89,6 +90,7 @@ namespace rpgc.Syntax
             // within the main procedure AND spec are not the same 
             if (isProcSection == false)
             {
+                // add hidden procedure declaration line
                 if (doAddMainFunciton == true)
                 {
                     // start of the C specificaton
@@ -98,10 +100,11 @@ namespace rpgc.Syntax
 
                     // at the end of the C spec and starting O or P
                     // compleate the end procedure
-                    if (mainDic[curSpec] > 4 && mainDic[specChkStr] == 3)
+                    if (mainDic[curSpec] > 4 && mainDic[specChkStr] == 4)
                         doAddMainProcEnd = true;
                 }
 
+                // compute line spec
                 if (mainDic[curSpec] >= mainDic[specChkStr])
                 {
                     // start of procedure section reset to D and return true
@@ -402,17 +405,6 @@ namespace rpgc.Syntax
             Value = null;
 
 
-            // -------------------------------------------------------------------------------------------------
-            // check if using free format
-            if (pos == 0 && curChar == '*' && peek(1) == '*')
-            {
-                doFreeLex = checkFree();
-                return new SyntaxToken(_SyntaxTree, TokenKind.TK_SPACE, 0, 0, "", symStart);
-            }
-
-            // compile a traditinal RPG Program
-            if (doFreeLex == false)
-                return doStructLex();
 
             // -------------------------------------------------------------------------------------------------
             // c++ style comment line
@@ -779,15 +771,12 @@ namespace rpgc.Syntax
                     break;
                 case "DCL-PR":
                     kind = TokenKind.TK_VARDDATAS;
-                    inDBlock = true;
                     break;
                 case "DCL-PI":
                     kind = TokenKind.TK_PROCINFC;
-                    inDBlock = true;
                     break;
                 case "DCL-DS":
                     kind = TokenKind.TK_VARDDATAS;
-                    inDBlock = true;
                     break;
                 case "DCL-S":
                     kind = TokenKind.TK_VARDECLR;
@@ -801,15 +790,12 @@ namespace rpgc.Syntax
                     break;
                 case "END-PI":
                     kind = TokenKind.TK_ENDPI;
-                    inDBlock = false;
                     break;
                 case "END-PR":
                     kind = TokenKind.TK_ENDPR;
-                    inDBlock = false;
                     break;
                 case "END-DS":
                     kind = TokenKind.TK_ENDDS;
-                    inDBlock = false;
                     break;
             }
 
@@ -980,13 +966,14 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
-        public List<SyntaxToken> getLexTokenList(SyntaxTree _sTree)
+        public List<SyntaxToken> getLexTokenList()
         {
             SyntaxToken tok;
             List<SyntaxToken> ret;
 
             ret = new List<SyntaxToken>();
 
+            // check if user has writen a fixed format program 
             if (checkFree() == false)
                 return doStructLex2();
 
@@ -1002,19 +989,19 @@ namespace rpgc.Syntax
                     if (doAddMainProcSrt == true)
                     {
                         doAddMainProcSrt = false;
-                        ret.AddRange(SyntaxFacts.prepareMainFunction(_sTree, TokenKind.TK_SEMI, true));
+                        ret.AddRange(SyntaxFacts.prepareMainFunction(_SyntaxTree, TokenKind.TK_SEMI, true));
                     }
-                    if (doAddMainProcEnd == true)
+                    if (doAddMainProcEnd == true || tok.kind == TokenKind.TK_EOI)
                     {
                         doAddMainProcEnd = false;
                         doAddMainFunciton = false;
-                        ret.AddRange(SyntaxFacts.prepareMainFunction(_sTree, TokenKind.TK_SEMI, false));
+                        ret.AddRange(SyntaxFacts.prepareMainFunction(_SyntaxTree, TokenKind.TK_SEMI, false));
                     }
                 }
 
                 // special case for else add block end befor else
                 if (tok.kind == TokenKind.TK_ELSE)
-                    ret.Add(new SyntaxToken(_sTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
+                    ret.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
 
                 // save avalable tokens skipping nulls and space
                 if (tok == null || tok.kind == TokenKind.TK_SPACE || tok.kind == TokenKind.TK_BADTOKEN)
@@ -1033,74 +1020,61 @@ namespace rpgc.Syntax
         {
             string line = "", sorc;
             string[] arr;
-            SyntaxToken tmpTok;
-            bool Ft, Hv, Em;
             bool isEOIInList, isIBMSource;
+            List<SyntaxToken> ret = new List<SyntaxToken>();
 
             isIBMSource = false;
-            Ft = (doDecmiation == true);
-            Hv = (strucLexLine.Count > 0);
-            Em = (sourceLines.Count == 0);
 
-            // ----------------------------------------------------------------
-            // THIS IF BLOCK EXECUTES ONLY ONCE
-            // If block only executes when
-            // Ft: On the First Time run or 
-            // Hv: the list strucLexLine has elements (Has a value) or 
-            // Em: sourceLines is not empty
-            if (Ft == true || (Hv == false && Em == false))
+
+            // create a list of lines
+            if (doDecmiation == true)
             {
-                // do this only once 
-                // create a list of lines
-                if (doDecmiation == true)
-                {
-                    doDecmiation = false;
+                doDecmiation = false;
 
-                    sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
-                    //sorc = sorc.Substring(0, sorc.Length - 1);
-                    arr = sorc.Split('¶');
-                    isIBMSource = SyntaxFacts.isIBMDoc(arr);
-                    originalSrucLinesCount = arr.Length;
+                sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
+                //sorc = sorc.Substring(0, sorc.Length - 1);
+                arr = sorc.Split('¶');
+                isIBMSource = SyntaxFacts.isIBMDoc(arr);
+                originalSrucLinesCount = arr.Length;
 
-                    // save array as list
-                    sourceLines = new List<string>(arr);
-                }
-
-
-                lineFeeder = new List<StructCard>();
-
-                for (int i = 0; i < sourceLines.Count(); i++)
-                {
-                    // get a line and capatilize all letters but not the strings
-                    line = SyntaxFacts.normalizeLine(sourceLines[i], isIBMSource);
-
-                    // remove comments and add line to list
-                    line = SyntaxFacts.normalizeComments(line);
-
-                    sourceLines[i] = line;
-                    lineFeeder.Add(new StructCard(line, (i + 1)));
-                }
-
-                // get inline declares
-                strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
-
-                // generate a list of tokens from the soruce code
-                strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
-
-                // check if there is a EOI token in the token list
-                isEOIInList = (from tkn in strucLexLine
-                               select tkn.kind == TokenKind.TK_EOI).FirstOrDefault();
-                if (isEOIInList == false)
-                    strucLexLine.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_EOI, 1, 0, originalSrucLinesCount, 0));
+                // save array as list
+                sourceLines = new List<string>(arr);
             }
-            // ----------------------------------------------------------------
 
-            // treat list like a que when the lexer is called
-            // pop the first element from the token list and return it
-            tmpTok = strucLexLine[0];
-            strucLexLine.RemoveAt(0);
 
-            return strucLexLine;
+            lineFeeder = new List<StructCard>();
+
+            for (int i = 0; i < sourceLines.Count(); i++)
+            {
+                // get a line and capatilize all letters but not the strings
+                line = SyntaxFacts.normalizeLine(sourceLines[i], isIBMSource);
+
+                // remove comments and add line to list
+                line = SyntaxFacts.normalizeComments(line);
+
+                sourceLines[i] = line;
+                lineFeeder.Add(new StructCard(line, (i + 1)));
+            }
+
+            // get inline declares
+            strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
+
+            // generate a list of tokens from the soruce code
+            strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
+
+            // check if there is a EOI token in the token list
+            isEOIInList = (from tkn in strucLexLine
+                           select tkn.kind == TokenKind.TK_EOI).FirstOrDefault();
+            if (isEOIInList == false)
+                strucLexLine.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_EOI, 1, 0, originalSrucLinesCount, 0));
+
+            // ------------------------------------------------------------------
+            // remove any spaces from source file
+            foreach (SyntaxToken el in strucLexLine)
+                if (el.kind != TokenKind.TK_SPACE)
+                    ret.Add(el);
+
+            return ret;
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////

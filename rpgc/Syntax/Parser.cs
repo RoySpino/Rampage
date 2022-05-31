@@ -33,23 +33,9 @@ namespace rpgc.Syntax
             pos = 0;
             _sTree = syntaxTree;
 
+
             // get tokens
-            do
-            {
-                // get token
-                tok = lex.doLex();
-
-                // special case for else add block end befor else
-                if (tok.kind == TokenKind.TK_ELSE)
-                    _tokens.Add(new SyntaxToken(_sTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
-
-                // save avalable tokens skipping nulls and space
-                if (tok == null || tok.kind == TokenKind.TK_SPACE || tok.kind == TokenKind.TK_BADTOKEN)
-                    continue;
-                    
-                _tokens.Add(tok);
-            }
-            while (tok.kind != TokenKind.TK_EOI);
+            _tokens = lex.getLexTokenList();
 
             // setup local token array and merge lexer diagnostics
             tokens = _tokens.ToImmutableArray();
