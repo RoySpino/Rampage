@@ -925,9 +925,12 @@ namespace rpgc.Syntax
             }
 
             // check for end of boolean statement
-            tKind = TopToken.kind;
-            if (tKind == TokenKind.TK_NEWLINE || tKind == TokenKind.TK_BLOCKSTART)
-                onEvalLine = true;
+            if (TopToken != null)
+            {
+                tKind = TopToken.kind;
+                if (tKind == TokenKind.TK_NEWLINE || tKind == TokenKind.TK_BLOCKSTART)
+                    onEvalLine = true;
+            }
 
             // check if the current line is a comparison or assignment
             if (onEvalLine == true && assignmentCnt < 1)
