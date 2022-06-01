@@ -237,7 +237,7 @@ namespace rpgc
             string message;
             TextSpan span = textLocation.SPAN;
 
-            message = string.Format("({2},{3}): error: only assignment, call, increment, decrement, await, and new object expressions can be used as a statement", span.LineNo, span.LinePos);
+            message = string.Format("({0},{1}): error: only assignment, call, increment, decrement, await, and new object expressions can be used as a statement", span.LineNo, span.LinePos);
 
             report(textLocation, message);
         }

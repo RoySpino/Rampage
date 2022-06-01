@@ -24,6 +24,7 @@ namespace rpgc.Syntax
         static string lineType = "", curOp="", prevOp="";
         static string factor, DBlockType;
         static int pos, sSize, linePos;
+        private static SyntaxToken TopToken;
         private static List<SyntaxToken> localTokenLst = new List<SyntaxToken>();
         private static List<SyntaxToken> localTokenLst2 = new List<SyntaxToken>();
         private static List<SyntaxToken> localCSpecDclr = new List<SyntaxToken>();
@@ -35,7 +36,8 @@ namespace rpgc.Syntax
         private static bool inDecareBlock,
             doAddMainFunciton = true,
             doAddMainProcEnd = false,
-            doAddMainProcSrt = true;
+            doAddMainProcSrt = true,
+            doMainInjectBeforEOF = false;
 
         private static bool isGoodSpec(char spec, int line)
         {
@@ -906,7 +908,7 @@ namespace rpgc.Syntax
         // ////////////////////////////////////////////////////////////////////////////////////
         private static TokenKind getAssignmentOrComparisonToken()
         {
-            TokenKind ret;
+            TokenKind ret, tKind;
 
             // if the [=] is inside a parethisies then its a comparison
             onEvalLine = (parenCnt == 0 && onBooleanLine == false);
@@ -921,6 +923,11 @@ namespace rpgc.Syntax
                     onEvalLine = false;
                     break;
             }
+
+            // check for end of boolean statement
+            tKind = TopToken.kind;
+            if (tKind == TokenKind.TK_NEWLINE || tKind == TokenKind.TK_BLOCKSTART)
+                onEvalLine = true;
 
             // check if the current line is a comparison or assignment
             if (onEvalLine == true && assignmentCnt < 1)
@@ -1123,6 +1130,19 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////
+        private static List<SyntaxToken> injectMainEnd()
+        {
+            List<SyntaxToken> ret = new List<SyntaxToken>();
+
+            doAddMainProcEnd = false;
+            doAddMainFunciton = false;
+            doMainInjectBeforEOF = false;
+            ret.AddRange(SyntaxFacts.prepareMainFunction(sTree_, TokenKind.TK_NEWLINE, false));
+
+            return ret;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////
         public static List<SyntaxToken> doDecimation3(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
         {
             bool doFreeBlock = false;
@@ -1208,12 +1228,21 @@ namespace rpgc.Syntax
                     else
                     {
                         // set flag to add ending part of the main procedure
-                        // this is done at the end of this loop
                         if (doAddMainProcSrt == false)
-                            if ((" C".Contains(prevSpec) && Specification != 'C') || (i + 1) == cardLimit)
+                        {
+                            // O or P spec is found after
+                            if (prevSpec == 'C' && Specification != 'C')
                             {
-                                doAddMainProcEnd = true;
+                                ret.AddRange(injectMainEnd());
                             }
+
+                            // only main procedure is in the program
+                            // this is done at the end of this loop
+                            if ((i + 1) == cardLimit)
+                            {
+                                doMainInjectBeforEOF = true;
+                            }
+                        }
                     }
                 }
 
@@ -1243,7 +1272,12 @@ namespace rpgc.Syntax
                             inDecareBlock = false;
                             DBlockType = null;
                         }
+
                         lst = decimateCSpec(lineNo, tmp);
+
+                        // save operation this will be used for multiline IF and EVAL
+                        if (string.IsNullOrEmpty(lst[4].symbol) == false)
+                            prevOp = lst[4].symbol;
 
                         // peek ahead
                         if ((i + 1) < cards.Count())
@@ -1394,11 +1428,9 @@ namespace rpgc.Syntax
 
 
                 // add hidden main procedure
-                if (doAddMainFunciton == true && doAddMainProcEnd == true && doAddMainProcSrt == false)
+                if (doAddMainFunciton == true && doMainInjectBeforEOF == true)
                 {
-                    doAddMainProcEnd = false;
-                    doAddMainFunciton = false;
-                    ret.AddRange(SyntaxFacts.prepareMainFunction(st, TokenKind.TK_NEWLINE, false));
+                    ret.AddRange(injectMainEnd());
                 }
             }
 
@@ -1549,6 +1581,11 @@ namespace rpgc.Syntax
                         }
                         break;
                     case "BEGSR":
+                        if (doAddMainFunciton == true && doAddMainProcEnd == true)
+                        {
+                            ret.AddRange(injectMainEnd());
+                        }
+
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_PROCDCL, (OP.linePos), 1, "BEGSR", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, FAC1.linePos, (FAC1.chrPos), FAC1.symbol.Trim(), FAC1.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
@@ -1616,30 +1653,30 @@ namespace rpgc.Syntax
                     case "DOULT":
                     case "DOUEQ":
                     case "DOUNE":
+                        lineType = "DOU";
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOU, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
                         ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
-                        lineType = "DOU";
                         break;
                     case "DOU":
                         onBooleanLine = true;
                         if (FAC1.symbol != "")
                         {
                             // somthing was entered in factor 1
-                            ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", OP.chrPos));
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", OP.chrPos));
                             location = new TextLocation(source, new TextSpan(FAC1.chrPos, FAC1.symbol.Length));
                             diagnostics.reportBadFactor(location, 1, FAC1.chrPos);
                         }
                         else
                         {
-                            ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOU, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
-                            ret.AddRange(doLex(FAC2));
-                            ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
-                            ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
                             lineType = "DOU";
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_DOU, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                            ret.AddRange(doLex(FAC2));
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
                         }
                         break;
                     case "DOWGE":
@@ -1667,11 +1704,11 @@ namespace rpgc.Syntax
                         }
                         else
                         {
+                            lineType = "DOW";
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOW, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                             ret.AddRange(doLex(FAC2));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
-                            lineType = "DOW";
                         }
                         break;
                     case "IF":
@@ -1685,11 +1722,11 @@ namespace rpgc.Syntax
                         }
                         else
                         {
+                            lineType = "IF";
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IF, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                             ret.AddRange(doLex(FAC2));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "IF", OP.chrPos));
-                            lineType = "IF";
                         }
                         break;
                     case "IFGE":
@@ -1698,19 +1735,19 @@ namespace rpgc.Syntax
                     case "IFLT":
                     case "IFEQ":
                     case "IFNE":
+                        lineType = "IF";
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IF, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
                         ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "IF", OP.chrPos));
-                        lineType = "IF";
                         break;
                     case "ELSE":
+                        lineType = "ELSE";
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ELSE, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "IF", OP.chrPos));
-                        lineType = "ELSE";
                         break;
                     case "END":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
@@ -1929,6 +1966,10 @@ namespace rpgc.Syntax
                 ret = new List<SyntaxToken>(localCSpecDclr);
                 localCSpecDclr.Clear();
             }
+
+            // save last token
+            if (ret.Count > 0)
+                TopToken = ret[ret.Count - 1];
 
             return ret;
         }
