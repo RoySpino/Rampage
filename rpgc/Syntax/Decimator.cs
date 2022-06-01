@@ -1146,7 +1146,7 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////
-        public static List<SyntaxToken> doDecimation3(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
+        public static List<SyntaxToken> doDecimation(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
         {
             bool doFreeBlock = false;
             char Specification;
@@ -1174,7 +1174,9 @@ namespace rpgc.Syntax
                 lineNo = card.LinePos;
 
                 // get last specification
-                prevSpec = Specification;
+                // ignore blanks
+                if (Specification > 32)
+                    prevSpec = Specification;
 
                 // setup line
                 tmp = line.PadRight(72);
@@ -1852,6 +1854,7 @@ namespace rpgc.Syntax
                     case "EVAL":
                     case "EVALR":
                         onEvalLine = true;
+                        lineType = "";
                         if (FAC1.symbol != "")
                         {
                             // somthing was entered in factor 1
@@ -1867,6 +1870,7 @@ namespace rpgc.Syntax
                         break;
                     case "FOR":
                         onEvalLine = true;
+                        lineType = "";
                         if (FAC1.symbol != "")
                         {
                             // somthing was entered in factor

@@ -340,7 +340,7 @@ namespace rpgc.Syntax
                 strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
 
                 // generate a list of tokens from the soruce code
-                strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
+                strucLexLine = Decimator.doDecimation(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
                 
                 // check if there is a EOI token in the token list
                 isEOIInList = (from tkn in strucLexLine
@@ -1060,7 +1060,7 @@ namespace rpgc.Syntax
             strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
 
             // generate a list of tokens from the soruce code
-            strucLexLine = Decimator.doDecimation3(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
+            strucLexLine = Decimator.doDecimation(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
 
             // check if there is a EOI token in the token list
             isEOIInList = (from tkn in strucLexLine
