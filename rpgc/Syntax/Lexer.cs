@@ -991,7 +991,7 @@ namespace rpgc.Syntax
                         doAddMainProcSrt = false;
                         ret.AddRange(SyntaxFacts.prepareMainFunction(_SyntaxTree, TokenKind.TK_SEMI, true));
                     }
-                    if (doAddMainProcEnd == true || tok.kind == TokenKind.TK_EOI)
+                    if (doAddMainProcEnd == true || tok.kind == TokenKind.TK_EOI || tok.kind == TokenKind.TK_BEGSR|| tok.kind == TokenKind.TK_PROCDCL)
                     {
                         doAddMainProcEnd = false;
                         doAddMainFunciton = false;

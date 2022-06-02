@@ -1292,6 +1292,10 @@ namespace rpgc.Syntax
                         if (string.IsNullOrEmpty(lst[4].symbol) == false)
                             prevOp = lst[4].symbol;
 
+                        // fisrt subroutine was found complete the main funciton
+                        if (doAddMainFunciton == true && doAddMainProcSrt == false && prevOp == "BEGSR")
+                            ret.AddRange(injectMainEnd());
+
                         // peek ahead
                         if ((i + 1) < cards.Count())
                         {
