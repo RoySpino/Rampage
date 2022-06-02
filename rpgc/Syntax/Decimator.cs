@@ -502,6 +502,14 @@ namespace rpgc.Syntax
             sSize = sz;
             assignmentCnt = 0;
 
+            // compleate pi/pr/ds block if any
+            if (inDecareBlock == true)
+            {
+                ret.AddRange(getEndInterfaceOrPrototype());
+                inDecareBlock = false;
+                DBlockType = null;
+            }
+
             nextChar();
 
             while (pos != sz)
