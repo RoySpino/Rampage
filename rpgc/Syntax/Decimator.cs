@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using rpgc.Symbols;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using rpgc.Text;
 
 namespace rpgc.Syntax
@@ -1157,7 +1157,7 @@ namespace rpgc.Syntax
         // ////////////////////////////////////////////////////////////////////////////
         public static List<SyntaxToken> doDecimation(List<StructCard> cards, SourceText txt, ref SyntaxTree st, ref DiagnosticBag diag)
         {
-            bool doFreeBlock = false;
+            bool doFreeBlock = false, onEndCSpec, onStartCSpec, onFreeTagStart, onBegSR;
             char Specification;
             string tmp, line;
             int charPos, lineNo, cardLimit;
@@ -1165,6 +1165,7 @@ namespace rpgc.Syntax
             List<StructNode> lst;
             List<SyntaxToken> ret;
             StructCard card;
+            Regex regBegSr = new Regex(@"(?i)^([c])(.{19})(begsr)");
 
             sTree_ = st;
             ret = new List<SyntaxToken>();
@@ -1210,10 +1211,30 @@ namespace rpgc.Syntax
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SEMI, lineNo, tmp.IndexOf(";"), ";", lineNo));
                 }
 
+                // perform free block
+                if (tmp.Substring(0, 7).Contains("/FREE") == true)
+                {
+                    doFreeBlock = true;
+                    isInFreeTag = true;
+                    continue;
+                }
+                if (tmp.Substring(0, 11).Contains("/END-FREE") == true)
+                {
+                    doFreeBlock = false;
+                    isInFreeTag = false;
+                    continue;
+                }
+
                 // set main procedure setup flags
                 if (doAddMainFunciton == true)
                 {
-                    if (doAddMainProcSrt == true && prevSpec != 'C' && Specification == 'C' || tmp.Substring(0, 7).Contains("/FREE") == true)
+                    onStartCSpec = (prevSpec != 'C' && Specification == 'C');
+                    onFreeTagStart = doFreeBlock;
+                    onBegSR = regBegSr.Match(line).Success;
+                    onEndCSpec = (prevSpec == 'C' && Specification != 'C');
+
+                    //if (doAddMainProcSrt == true && ((prevSpec != 'C' && Specification == 'C') || tmp.Substring(0, 7).Contains("/FREE") == true))
+                    if ((doAddMainProcSrt == true && onStartCSpec == true) || (doAddMainProcSrt == true && onFreeTagStart == true))
                     {
                         // add starting half of the HIDDEN main procedure
                         doAddMainProcSrt = false;
@@ -1225,7 +1246,8 @@ namespace rpgc.Syntax
                         if (doAddMainProcSrt == false)
                         {
                             // O or P spec is found after
-                            if (prevSpec == 'C' && Specification != 'C')
+                            // and not within a free block
+                            if (onFreeTagStart == false && onEndCSpec == true || onFreeTagStart == false && onBegSR == true)
                             {
                                 ret.AddRange(injectMainEnd());
                             }
@@ -1240,19 +1262,6 @@ namespace rpgc.Syntax
                     }
                 }
 
-                // perform free block
-                if (tmp.Substring(0, 7).Contains("/FREE") == true)
-                {
-                    doFreeBlock = true;
-                    isInFreeTag = true;
-                    continue;
-                }
-                if (tmp.Substring(0, 11).Contains("/END-FREE") == true)
-                {
-                    doFreeBlock = false;
-                    isInFreeTag = false;
-                    continue;
-                }
                 if (doFreeBlock == true)
                 {
                     tmp = tmp.Trim();
@@ -1445,14 +1454,16 @@ namespace rpgc.Syntax
                 }
 
 
-                // add hidden main procedure
+                /* add hidden main procedure
                 if (doAddMainFunciton == true && doMainInjectBeforEOF == true)
                 {
                     ret.AddRange(injectMainEnd());
                 }
+                */
             }
 
-            // add hidden main procedure
+            // at end of sorce but main procedure was not compleate
+            // add hidden end for main procedure
             if (doAddMainFunciton == true && doAddMainProcSrt == false)
             {
                 ret.AddRange(injectMainEnd());
