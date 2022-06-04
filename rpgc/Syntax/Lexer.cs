@@ -761,7 +761,7 @@ namespace rpgc.Syntax
             // if not report an error
             line = $"CTL{sb.ToString().ToUpper()}";
             if (line != "CTL-OPT")
-                diagnostics.reportBadSpec(_SyntaxTree.ROOT.Location(), line, lineNum, linePos);
+                diagnostics.reportWrongSpecLoc(_SyntaxTree.ROOT.Location(), line, "CTL-OPT", lineNum, linePos);
 
             sb = new System.Text.StringBuilder();
 
