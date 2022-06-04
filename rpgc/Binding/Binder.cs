@@ -123,16 +123,21 @@ namespace rpgc.Binding
                 // otherwise get the main function
                 if (mainFunctionArr != null)
                 {
-                    if (mainFunctionArr.Length > 1)
+                    switch (mainFunctionArr.Length)
                     {
-                        mainFunction = null;
+                        case 0:
+                            return new BoundGlobalScope(prev, tDiagonostics, functon, vars, null, null, statementBuilder.ToImmutable());
+                        case 1:
+                            mainFunction = mainFunctionArr[0];
+                            break;
+                        default:
+                            mainFunction = null;
 
-                        // multiple mains found
-                        foreach (FunctionSymbol fn in mainFunctionArr)
-                            diag.reportMultipleMainFunctions(fn.Declaration.Location());
+                            // multiple mains found
+                            foreach (FunctionSymbol fn in mainFunctionArr)
+                                diag.reportMultipleMainFunctions(fn.Declaration.Location());
+                            break;
                     }
-                    else
-                        mainFunction = mainFunctionArr[0];
                 }
 
                 // check the main funciton for errors
@@ -203,6 +208,10 @@ namespace rpgc.Binding
 
             diagnostics = gblScope.Diagnostic;
             parantScope = createParantScope(gblScope);
+
+            // check if diagnostics have been initalised
+            if (gblScope.Diagnostic == null)
+                diagnostics = ImmutableArray.Create<Diagnostics>();
 
             // errors where made before binder stop evrything and display errors
             if (diagnostics.Any())
@@ -284,11 +293,13 @@ namespace rpgc.Binding
                 prev = stk.Pop();
                 _scope = new BoundScope(parant);
 
-                foreach (FunctionSymbol f in prev.Functons)
-                    _scope.declareFunction(f);
+                if (prev.Functons != null)
+                    foreach (FunctionSymbol f in prev.Functons)
+                        _scope.declareFunction(f);
 
-                foreach (VariableSymbol v in prev.Variables)
-                    _scope.declare(v);
+                if (prev.Variables != null)
+                    foreach (VariableSymbol v in prev.Variables)
+                        _scope.declare(v);
 
                 parant = _scope;
             }

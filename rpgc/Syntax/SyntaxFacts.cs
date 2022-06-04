@@ -932,15 +932,28 @@ namespace rpgc.Syntax
         {
             int col1prpb, col6prob;
             bool onCol1, onCol6;
-            Regex regCol1, regCol6;
+            Regex regCol1, regCol6,
+                  regRampageFree, regIBMFree;
 
             regCol1 = new Regex(@"^([hfdicop])([^*]{2})([ n])([kml0-9][0-9a-z]|\s\s)", RegexOptions.IgnoreCase);
             regCol6 = new Regex(@"^(.....)([hfdicop])([^*]{2})([ n])([kml0-9][0-9a-z]|\s\s)", RegexOptions.IgnoreCase);
+            regRampageFree = new Regex(@"^(?i)./free");
+            regIBMFree = new Regex(@"^(?i)....../free");
             col1prpb = 0;
             col6prob = 0;
 
             foreach (string lin in lines)
             {
+                // check for free tags
+                // this is an instant affirmation
+                //    IBM free can only exist on column 7
+                //    Rampage free can only exist on column 2
+                if (regRampageFree.Match(lin).Success)
+                    return false;
+                if (regIBMFree.Match(lin).Success)
+                    return true;
+
+                // check line for spec position
                 onCol1 = regCol1.Match(lin).Success;
                 onCol6 = regCol6.Match(lin).Success;
 

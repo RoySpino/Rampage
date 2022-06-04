@@ -929,6 +929,7 @@ namespace rpgc.Syntax
                 case "IF":
                 case "WHEN":
                     onEvalLine = false;
+                    TopToken = null;
                     break;
             }
 
@@ -1209,30 +1210,10 @@ namespace rpgc.Syntax
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SEMI, lineNo, tmp.IndexOf(";"), ";", lineNo));
                 }
 
-                // perform free block
-                if (tmp.Substring(0, 7).Contains("/FREE") == true)
-                {
-                    doFreeBlock = true;
-                    isInFreeTag = true;
-                    continue;
-                }
-                if (tmp.Substring(0, 11).Contains("/END-FREE") == true)
-                {
-                    doFreeBlock = false;
-                    isInFreeTag = false;
-                    continue;
-                }
-                if (doFreeBlock == true)
-                {
-                    tmp = tmp.Trim();
-                    ret.AddRange(doLex(new StructNode(lineNo, 0, tmp), true));
-                    continue;
-                }
-
                 // set main procedure setup flags
                 if (doAddMainFunciton == true)
                 {
-                    if (doAddMainProcSrt == true && prevSpec != 'C' && Specification == 'C')
+                    if (doAddMainProcSrt == true && prevSpec != 'C' && Specification == 'C' || tmp.Substring(0, 7).Contains("/FREE") == true)
                     {
                         // add starting half of the HIDDEN main procedure
                         doAddMainProcSrt = false;
@@ -1257,6 +1238,26 @@ namespace rpgc.Syntax
                             }
                         }
                     }
+                }
+
+                // perform free block
+                if (tmp.Substring(0, 7).Contains("/FREE") == true)
+                {
+                    doFreeBlock = true;
+                    isInFreeTag = true;
+                    continue;
+                }
+                if (tmp.Substring(0, 11).Contains("/END-FREE") == true)
+                {
+                    doFreeBlock = false;
+                    isInFreeTag = false;
+                    continue;
+                }
+                if (doFreeBlock == true)
+                {
+                    tmp = tmp.Trim();
+                    ret.AddRange(doLex(new StructNode(lineNo, 0, tmp), doFreeBlock));
+                    continue;
                 }
 
                 // begin decimation
@@ -1449,6 +1450,12 @@ namespace rpgc.Syntax
                 {
                     ret.AddRange(injectMainEnd());
                 }
+            }
+
+            // add hidden main procedure
+            if (doAddMainFunciton == true && doAddMainProcSrt == false)
+            {
+                ret.AddRange(injectMainEnd());
             }
 
             // ret has nothing to return move local ist to ret

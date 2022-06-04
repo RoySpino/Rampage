@@ -24,7 +24,7 @@ namespace rpgc.Syntax
         string lineType = "";
         bool doDecmiation;
         List<string> sourceLines = new List<string>();
-        bool isProcSection = false;
+        bool isProcSection = false, isInDBLock;
         private string specChkStr;
         List<StructCard> lineFeeder = new List<StructCard>();
         string currentSub;
@@ -73,14 +73,23 @@ namespace rpgc.Syntax
             else
                 mainDic = procSpec;
 
+            // set D block flag
+            if (SyntaxFacts.isInDBlock(spec) == true)
+            {
+                if (spec.Contains("END-") == true)
+                    isInDBLock = false;
+                else
+                    isInDBLock = true;
+            }
+
             // invalid specification found
             // assign D or C spec
             if (mainDic.ContainsKey(curSpec) == false)
             {
-                if (SyntaxFacts.isInDBlock(specChkStr))
+                curSpec = "C";
+
+                if (isInDBLock == true)
                     curSpec = "DCL-S";
-                else
-                    curSpec = "C";
             }
 
             // spec is the same 
@@ -387,6 +396,11 @@ namespace rpgc.Syntax
                     // advanc character position
                     for (int i = 0; i < 6; i++)
                         nextChar();
+
+                    // goto next instruction
+                    while (peek(0) < 33)
+                        nextChar();
+
                     return true;
                 }
             }
@@ -681,6 +695,15 @@ namespace rpgc.Syntax
             if (((symbol == "DCL" || symbol == "END") && peek(0) == '-') || (symbol == "BEGSR" || symbol == "ENDSR"))
                 symbol = getDeclaration(symbol);
 
+            // handl H spec
+            if (symbol == "CTL" && peek(0) == '-')
+            {
+                handleHSpec();
+                kind = TokenKind.TK_SPACE;
+                return "";
+            }
+            
+            // check spec order
             isGoodSpecResult = specCheckHelper(lineNum, symbol);
             if (isGoodSpecResult == false)
             {
@@ -718,6 +741,54 @@ namespace rpgc.Syntax
             }
 
             return symbol;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void handleHSpec()
+        {
+            string line;
+            string[] larr;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+            // read the rest of the key word
+            while (curChar > 32)
+            {
+                sb.Append(curChar);
+                nextChar();
+            }
+
+            // check if the line is an h spec line
+            // if not report an error
+            line = $"CTL{sb.ToString().ToUpper()}";
+            if (line != "CTL-OPT")
+                diagnostics.reportBadSpec(_SyntaxTree.ROOT.Location(), line, lineNum, linePos);
+
+            sb = new System.Text.StringBuilder();
+
+            // read h spec line to the end
+            while (true)
+            {
+                nextChar();
+
+                if (curChar == ';' || curChar < 31)
+                    break;
+                
+                sb.Append(curChar);
+            }
+
+            // consume [;]
+            nextChar();
+
+            // split string into words
+            line = sb.ToString().ToUpper().Trim();
+            larr = line.Split(' ');
+            
+            // change compiler settings
+            foreach(string itm in larr)
+            {
+                if (itm == "NOMAIN")
+                    doAddMainFunciton = false;
+            }
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////

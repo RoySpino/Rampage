@@ -413,6 +413,16 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        public void reportBadSpec(TextLocation txtLoc, string symbol, int linePosition, int charPos)
+        {
+            string message;
+
+            message = string.Format("({0},{1}): error: unknown specification ‘{2}’", linePosition, charPos, symbol);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         public void reportWrongSpecLoc(TextLocation txtLoc, char symbol, char expected, int linePosition)
         {
             string message;

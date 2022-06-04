@@ -115,14 +115,19 @@ namespace rpgc.IO
         {
             ConsoleColor messageColor;
             string location;
-
+            IEnumerable<Diagnostics> diagArr;
 
             Console.ResetColor();
-            
-            foreach (Diagnostics _diagnostic in diagnostics.OrderBy(da => da.Location.TEXT.FileName)
+
+            // get only unique errors
+            diagArr = diagnostics.Distinct();
+
+
+            // print errors ordered by line number and file name
+            foreach (Diagnostics _diagnostic in diagArr.OrderBy(da => da.Location.TEXT.FileName)
                                                             .ThenBy(db => db.SPAN.LineNo)
                                                             .ThenBy(dc => dc.SPAN.LinePos)
-                                                            .ThenBy(dd => dd.IsWarning))
+                                                            .ThenBy(dd => dd.IsWarning).Distinct())
             {
                 location = _diagnostic.Location.TEXT.FileName;
                 messageColor = _diagnostic.IsWarning ? ConsoleColor.DarkYellow : ConsoleColor.DarkRed;

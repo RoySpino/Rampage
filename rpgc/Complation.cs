@@ -160,7 +160,10 @@ namespace rpgc
             parseDiagno = SyntaxTrees.SelectMany(stre => stre.Diagnostics);
 
             // call property {globalScope_} to bind syntax tree
-            diognos = parseDiagno.Concat(globalScope_.Diagnostic).ToImmutableArray();
+            if (globalScope_.Diagnostic != null)
+                diognos = parseDiagno.Concat(globalScope_.Diagnostic).ToImmutableArray();
+            else
+                diognos = parseDiagno.ToImmutableArray();
 
             if (diognos.Any())
                 return new EvaluationResult(diognos, null);
