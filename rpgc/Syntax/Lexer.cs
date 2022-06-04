@@ -696,8 +696,10 @@ namespace rpgc.Syntax
                 symbol = getDeclaration(symbol);
 
             // handl H spec
-            if (symbol == "CTL" && peek(0) == '-')
+            // line check is to ensure that this is the first symbol on the line
+            if (symbol == "CTL" && peek(0) == '-' && lineNum != prevLine)
             {
+                prevLine = lineNum;
                 handleHSpec();
                 kind = TokenKind.TK_SPACE;
                 return "";
