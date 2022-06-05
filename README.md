@@ -6,13 +6,13 @@ This project was developed so that RPG development could be handled on a platfor
 # Things to know
 This project is still in the interpreter phase.
 
-Free-format and fix-format code is handled by a bool variable (doFreeLex) in Lexer.cs file. It is currently a hard coded flag and (when fully implemented) it will be dynamically set with a default value of False.
+Free-format and fix-format code is handled by a function "checkFree()" in Lexer.cs. This function returns True/False by checking if the first symbol in the source file is "**free". 
 
-Like RPG4 this compiler supports fixed and free-format code. But the primary difference between this compiler and IBM RPG is that the spec column begins at column 1 not 6
+Like RPG4 this compiler supports fixed and free-format code. Ideally code should be written in column 1, however the compiler can handle traditional RPG code that begins at column 6. 
 
-To make the development simpler there is no distinction between procedures that return nothing and subroutines. The only difference will be the positioning of theses sections of code.
+To make the development simpler there is no distinction between procedures that return nothing and subroutines. The only difference will be the positioning of theses sections of code. Subroutines are C specs so they should appear before P specs.
 
-Current specs that are implanted are D, C and P specs
+Current specs that are implanted are D, C and P specs. H spec is implemented as well, but it currently only handles the NOMAIN key word. 
 
 ## TODO
 Because there is no in-built database, this compiler will rely on an external database. Database assignment and connection will be handled within the H spec.
