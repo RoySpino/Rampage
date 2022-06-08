@@ -733,24 +733,39 @@ namespace rpgc.Syntax
         private static string readNumberToken()
         {
             string symbol = "";
-            int intDummy;
+            double doubleDummy;
 
             start += pos;
 
-            while (char.IsDigit(curChar) == true)
+            while (char.IsDigit(curChar) == true || curChar == '.')
             {
                 symbol += curChar;
                 nextChar();
             }
 
-            if (int.TryParse(symbol, out intDummy) == false)
+            // try to convert string to a number
+            // on bad number return bad token
+            if (double.TryParse(symbol, out doubleDummy) == false)
             {
                 location = new TextLocation(source, new TextSpan(start, symbol.Length));
                 diagnostics.reportInvalidNumber(location, symbol, TypeSymbol.Integer, start, symbol.Length);
+                kind = TokenKind.TK_BADTOKEN;
+                return symbol;
             }
 
-            kind = TokenKind.TK_INTEGER;
-            Value = intDummy;
+
+            // if the symbol is good check for a [.]
+            // when found return FLOAT otherwise INT
+            if (symbol.Contains("."))
+            {
+                kind = TokenKind.TK_FLOAT;
+                Value = doubleDummy;
+            }
+            else
+            {
+                kind = TokenKind.TK_INTEGER;
+                Value = (int)doubleDummy;
+            }
 
             return symbol;
         }

@@ -613,9 +613,10 @@ namespace rpgc.Syntax
                 case "FLOAT":
                 case "S":
                 case "I":
-                case "F":
                 case "P":
                     return Symbols.TypeSymbol.Integer;
+                case "F":
+                    return Symbols.TypeSymbol.Float;
                 case "DATE":
                 case "D":
                     return Symbols.TypeSymbol.Date;
@@ -1027,5 +1028,35 @@ namespace rpgc.Syntax
             }
         }
 
+        internal static rpgc.Symbols.TypeSymbol iToD(rpgc.Binding.BoundExpression L, rpgc.Binding.BoundExpression R)
+        {
+            bool isFloat_R, isFloat_L;
+
+            switch (R.Type.Name)
+            {
+                case "FLOAT(8)":
+                    isFloat_R = true;
+                    break;
+                default:
+                    isFloat_R = false;
+                    break;
+            }
+
+            switch (L.Type.Name)
+            {
+                case "INT(10)":
+                    isFloat_L = true;
+                    break;
+                default:
+                    isFloat_L = false;
+                    break;
+
+            }
+
+            if (isFloat_R == true || isFloat_L == true)
+                return rpgc.Symbols.TypeSymbol.Float;
+
+            return rpgc.Symbols.TypeSymbol.Integer;
+        }
     }
 }

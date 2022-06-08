@@ -1090,9 +1090,17 @@ namespace rpgc.Binding
         {
             BoundExpression left, right;
             BoundBinOperator boundOperatorKind;
+            TypeSymbol ctyp;
+
+            //BindConversion(syntax)
 
             left = BindExpression(syntax.left);
             right = BindExpression(syntax.right);
+            ctyp = SyntaxFacts.iToD(left, right);
+
+            left = BindConversion(syntax.left, ctyp);
+            right = BindConversion(syntax.right, ctyp);
+
             boundOperatorKind = BoundBinOperator.bind(syntax.operatorToken.kind, left.Type, right.Type);
 
             // check for errors

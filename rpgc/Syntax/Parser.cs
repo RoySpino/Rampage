@@ -72,6 +72,8 @@ namespace rpgc.Syntax
                 case TokenKind.TK_ZONED:
                 case TokenKind.TK_PACKED:
                     return parseNumberLiteral();
+                case TokenKind.TK_FLOAT:
+                    return parseFloatLiteral ();
                 case TokenKind.TK_STRING:
                     return parseStringLiteral();
                 case TokenKind.TK_EXSR:
@@ -437,6 +439,18 @@ namespace rpgc.Syntax
                 return new ErrorExpressionSyntax(_sTree);
 
             return new LiteralExpressionSyntax(_sTree,numberToken);
+        }
+
+        // ///////////////////////////////////////////////////////////////////////
+        private ExpresionSyntax parseFloatLiteral()
+        {
+            SyntaxToken numberToken;
+
+            numberToken = match(TokenKind.TK_FLOAT);
+            if (numberToken.kind == TokenKind.TK_BADTOKEN)
+                return new ErrorExpressionSyntax(_sTree);
+
+            return new LiteralExpressionSyntax(_sTree, numberToken);
         }
 
         // /////////////////////////////////////////////////////////////////////////

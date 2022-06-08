@@ -43,6 +43,7 @@ namespace rpgc
             }
         }
 
+        // //////////////////////////////////////////////////////////////
         public Evaluator(BoundBlockStatement root, Dictionary<VariableSymbol, object> _variables)
         {
             program = null;
@@ -52,6 +53,7 @@ namespace rpgc
             var c = program;
         }
 
+        // //////////////////////////////////////////////////////////////
         public Evaluator(ImmutableDictionary<FunctionSymbol, BoundBlockStatement> _functionBodies, BoundBlockStatement st, Dictionary<VariableSymbol, object> variables)
         {
             FunctionBodies = _functionBodies;
@@ -173,24 +175,32 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////////////////
         private object evaluateConversionExpression(BoundConversionExpression node)
         {
-            var value = evaluateExpression(node._Expression);
+            object value;
+            string typeName;
 
-            if (node.Type == TypeSymbol.Any)
-                return value;
-            if (node.Type == TypeSymbol.Indicator)
-                return Convert.ToBoolean(value);
-            if (node.Type == TypeSymbol.Integer)
-                return Convert.ToInt32(value);
-            if (node.Type == TypeSymbol.Char)
-                return value.ToString();
-            if (node.Type == TypeSymbol.Float)
-                return Convert.ToDouble(value);
-            if (node.Type == TypeSymbol.Date || node.Type == TypeSymbol.DateTime)
-                return Convert.ToDateTime(value.ToString());
-            if (node.Type == TypeSymbol.Time)
-                return Convert.ToDateTime($"1900-01-01 {value}");
+            value = evaluateExpression(node._Expression);
+            typeName = node.Type.Name;
 
-            throw new Exception($"Unexpected type {node.Type}");
+            switch(typeName)
+            {
+                case "ANY":
+                    return value;
+                case "IND":
+                    return Convert.ToBoolean(value);
+                case "INT(10)":
+                    return Convert.ToInt32(value);
+                case "FLOAT(8)":
+                    return Convert.ToDouble(value);
+                case "CHAR":
+                    return value.ToString();
+                case "DATETIME":
+                case "DATE":
+                    return Convert.ToDateTime(value.ToString());
+                case "TIME":
+                    return Convert.ToDateTime($"1900-01-01 {value}");
+                default:
+                    throw new Exception($"Unexpected type {node.Type}");
+            }
         }
 
         // //////////////////////////////////////////////////////////////////////////
@@ -238,12 +248,76 @@ namespace rpgc
             return output;
         }
 
+        // //////////////////////////////////////////////////////////////
+        private Object arithmaticEvaluater(Object A, Object B, string TypeName, BoundBinOpToken Operation)
+        {
+            Object ret;
+            int i_AA, i_BB;
+            double d_AA, d_BB;
+            bool onFloat;
+
+            onFloat = false;
+            i_AA = 0;
+            i_BB = 0;
+            d_AA = 0;
+            d_BB = 0;
+
+            switch (TypeName)
+            {
+                case "VARCHAR":
+                case "CHAR":
+                    return A.ToString() + B.ToString();
+                case "INT(10)":
+                    i_AA = Convert.ToInt32(A);
+                    i_BB = Convert.ToInt32(B);
+                    onFloat = false;
+                    break;
+                case "FLOAT(8)":
+                    d_AA = Convert.ToDouble(A);
+                    d_BB = Convert.ToDouble(B);
+                    onFloat = true;
+                    break;
+            }
+
+
+            if (onFloat == false)
+            {
+                switch (Operation)
+                {
+                    case BoundBinOpToken.BBO_ADD:
+                        return (i_AA + i_BB);
+                    case BoundBinOpToken.BBO_SUB:
+                        return (i_AA - i_BB);
+                    case BoundBinOpToken.BBO_MULT:
+                        return (i_AA * i_BB);
+                    case BoundBinOpToken.BBO_DIV:
+                        return (i_AA / i_BB);
+                }
+            }
+            else
+            {
+                switch (Operation)
+                {
+                    case BoundBinOpToken.BBO_ADD:
+                        return (d_AA + d_BB);
+                    case BoundBinOpToken.BBO_SUB:
+                        return (d_AA - d_BB);
+                    case BoundBinOpToken.BBO_MULT:
+                        return (d_AA * d_BB);
+                    case BoundBinOpToken.BBO_DIV:
+                        return (d_AA / d_BB);
+                }
+            }
+
+            return null;
+        }
+
         // //////////////////////////////////////////////////////////////////////////
         private object evaluateBoundBinaryExpression(BoundBinExpression biTmp)
         {
             object chameleonOBJL;
             object chameleonOBJR;
-            object ans;
+            object ans = null;
 
             chameleonOBJL = reEvaluate(biTmp.Left);
             chameleonOBJR = reEvaluate(biTmp.Right);
@@ -251,19 +325,16 @@ namespace rpgc
             switch (biTmp.OP.tok)
             {
                 case BoundBinOpToken.BBO_ADD:
-                    if (biTmp.Type == Symbols.TypeSymbol.Char || biTmp.Type == Symbols.TypeSymbol.varchar)
-                        ans = chameleonOBJL.ToString() + chameleonOBJR.ToString();
-                    else
-                        ans = Convert.ToInt32(chameleonOBJL) + Convert.ToInt32(chameleonOBJR);
+                    ans = arithmaticEvaluater(chameleonOBJL, chameleonOBJR, biTmp.OP.ResultType.Name, biTmp.OP.tok);
                     break;
                 case BoundBinOpToken.BBO_SUB:
-                    ans = Convert.ToInt32(chameleonOBJL) - Convert.ToInt32(chameleonOBJR);
+                    ans = arithmaticEvaluater(chameleonOBJL, chameleonOBJR, biTmp.OP.ResultType.Name, biTmp.OP.tok);
                     break;
                 case BoundBinOpToken.BBO_MULT:
-                    ans = Convert.ToInt32(chameleonOBJL) * Convert.ToInt32(chameleonOBJR);
+                    ans = arithmaticEvaluater(chameleonOBJL, chameleonOBJR, biTmp.OP.ResultType.Name, biTmp.OP.tok);
                     break;
                 case BoundBinOpToken.BBO_DIV:
-                    ans = Convert.ToInt32(chameleonOBJL) / Convert.ToInt32(chameleonOBJR);
+                    ans = arithmaticEvaluater(chameleonOBJL, chameleonOBJR, biTmp.OP.ResultType.Name, biTmp.OP.tok);
                     break;
 
                 case BoundBinOpToken.BBO_AND:
@@ -586,20 +657,6 @@ namespace rpgc
                 varb = _Globals[idx];
             }
 
-            // get value from apropreate dictionary
-            /*
-            switch (vtmp.Variable.kind)
-            {
-                case SymbolKind.SYM_GLOBALVAR:
-                    varb = _Globals[idx];
-                    break;
-                default:
-                    lcl = _locals.Peek();
-                    varb = lcl[idx];
-                    break;
-            }
-            */
-
             return varb;
         }
 
@@ -614,19 +671,6 @@ namespace rpgc
 
             // assign value to apropreate dictionary
             performAssignment(atmp.Variable, value);
-
-            /* assign value to apropreate dictionary
-            switch (atmp.Variable.kind)
-            {
-                case SymbolKind.SYM_GLOBALVAR:
-                    _Globals[atmp.Variable] = value;
-                    break;
-                default:
-                    lcl = _locals.Peek();
-                    lcl[atmp.Variable] = value;
-                    break;
-            }
-            */
 
             return value;
         }
@@ -657,8 +701,8 @@ namespace rpgc
         public object EvaluateStatment(BoundBlockStatement statment)
         {
             Dictionary<string, int> lableToIndex;
-            BoundLabelStatement l;
-            BoundStatement s;
+            BoundLabelStatement lbl;
+            BoundStatement smt;
             BoundGoToConditionalStatement cgts;
             BoundGoToStatement gs;
             BoundBlockStatement body;
@@ -667,33 +711,35 @@ namespace rpgc
             string lblName;
 
             body = ROOT;
+            index = 0;
             lableToIndex = new Dictionary<string, int>();
 
+            // collect all labels in the main function
             for (int i = 0; i < statment.Statements.Length; i++)
             {
                 if (statment.Statements[i] is BoundLabelStatement)
                 {
-                    l = (BoundLabelStatement)statment.Statements[i];
-                    lblName = l.Label.Name;
+                    lbl = (BoundLabelStatement)statment.Statements[i];
+                    lblName = lbl.Label.Name;
                     lableToIndex.Add(lblName, i + 1);
                 }
             }
 
-            index = 0;
+            // collect all statments in the main function
             while (index < statment.Statements.Length)
             {
-                s = statment.Statements[index];
+                smt = statment.Statements[index];
 
-                switch (s.tok)
+                switch (smt.tok)
                 {
                     case BoundNodeToken.BNT_EXPRSTMT:
-                        evaluateExpressionStatement((BoundExpressionStatement)s);
+                        evaluateExpressionStatement((BoundExpressionStatement)smt);
                         break;
                     case BoundNodeToken.BNT_VARDECLR:
-                        evaluateVariableDaclaration((boundVariableDeclaration)s);
+                        evaluateVariableDaclaration((boundVariableDeclaration)smt);
                         break;
                     case BoundNodeToken.BNT_GOTOCOND:
-                        cgts = (BoundGoToConditionalStatement)s;
+                        cgts = (BoundGoToConditionalStatement)smt;
                         cond = (bool)reEvaluate(cgts.Condition);
                         if ((cond == true && cgts.JumpIfFalse == false) || (cond == false && cgts.JumpIfFalse == true))
                         {
@@ -703,18 +749,18 @@ namespace rpgc
                         }
                         break;
                     case BoundNodeToken.BNT_GOTO:
-                        gs = (BoundGoToStatement)s;
+                        gs = (BoundGoToStatement)smt;
                         lblName = gs.Label.Name;
                         index = lableToIndex[lblName];
                         continue;
                     case BoundNodeToken.BNT_RETSTMT:
-                        lastValue =  evaluateReturnExpression((BoundReturnStatement)s);
+                        lastValue =  evaluateReturnExpression((BoundReturnStatement)smt);
                         return lastValue;
                     case BoundNodeToken.BNT_LABEL:
                         break;
                     default:
-                        s.writeTo(Console.Out);
-                        throw new Exception(string.Format("unexpected token {0}", s.tok));
+                        smt.writeTo(Console.Out);
+                        throw new Exception(string.Format("unexpected token {0}", smt.tok));
                 }
                 index++;
             }

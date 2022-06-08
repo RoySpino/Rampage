@@ -91,8 +91,10 @@ namespace rpgc.Syntax
                         case "INT(10)":
                         case "ZONED":
                         case "PACKED":
-                        case "FLOAT":
                             inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_INTEGER, 0, 0, 0));
+                            break;
+                        case "FLOAT":
+                            inzVal = new LiteralExpressionSyntax(STREE, new SyntaxToken(STREE, TokenKind.TK_FLOAT, 0, 0, 0.0));
                             break;
                         case "DATE":
                         case "TIMESTAMP":
