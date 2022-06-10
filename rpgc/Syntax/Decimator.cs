@@ -1795,6 +1795,7 @@ namespace rpgc.Syntax
                         break;
                     case "ELSE":
                         lineType = "ELSE";
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), "IF", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ELSE, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "IF", OP.chrPos));

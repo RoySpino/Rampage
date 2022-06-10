@@ -485,7 +485,6 @@ namespace rpgc.Syntax
                 case "*BLANK":
                 case "*BLANKS":
                     return TokenKind.TK_STRING;
-
                 case "*ZERO":
                 case "*ZEROS":
                     return TokenKind.TK_INTEGER;
@@ -506,7 +505,6 @@ namespace rpgc.Syntax
                 case "*BLANK":
                 case "*BLANKS":
                     return " ";
-
                 case "*ZERO":
                 case "*ZEROS":
                     return "0";

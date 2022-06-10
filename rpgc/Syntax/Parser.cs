@@ -13,7 +13,7 @@ namespace rpgc.Syntax
     internal sealed class Parser
     {
         Lexer lex = null;
-        SyntaxToken tok, current;
+        SyntaxToken lastToken, current;
         TokenKind EndToken;
         int pos, tCount;
         string curSubroutineScope;
@@ -32,6 +32,7 @@ namespace rpgc.Syntax
             text = syntaxTree.TEXT;
             pos = 0;
             _sTree = syntaxTree;
+            lastToken = null;
 
 
             // get tokens
@@ -216,6 +217,7 @@ namespace rpgc.Syntax
 
             return left;
         }
+
 
         // ///////////////////////////////////////////////////////////////////////
         private ExpresionSyntax parceAssignmentExpression()
@@ -648,6 +650,7 @@ namespace rpgc.Syntax
             ExpresionSyntax condition;
             StatementSyntax statement;
             ElseStatementSyntax elseClause;
+            var curTok = current;
 
             keyword = match(TokenKind.TK_IF);
             condition = parceExpression();

@@ -737,6 +737,9 @@ namespace rpgc.Binding
         {
             Conversion convertn;
 
+            if (expression.Type == TypeSymbol.Integer && type == TypeSymbol.Char)
+                convertn = null;
+
             // get appropreat conversion
             if (isAssignment == false)
                 convertn = Conversion.Clasifiyer(expression.Type, type);
@@ -1096,10 +1099,6 @@ namespace rpgc.Binding
 
             left = BindExpression(syntax.left);
             right = BindExpression(syntax.right);
-            ctyp = SyntaxFacts.iToD(left, right);
-
-            left = BindConversion(syntax.left, ctyp);
-            right = BindConversion(syntax.right, ctyp);
 
             boundOperatorKind = BoundBinOperator.bind(syntax.operatorToken.kind, left.Type, right.Type);
 

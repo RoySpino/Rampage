@@ -61,9 +61,9 @@ namespace rpgc.Binding
             }
 
             // integer to float
-            if (from == TypeSymbol.Integer)
+            if (from == TypeSymbol.Integer || from  == TypeSymbol.Float)
             {
-                if (to == TypeSymbol.Float)
+                if (to == TypeSymbol.Float || to == TypeSymbol.Integer)
                     return Conversion.EXPLICIT;
 
             }

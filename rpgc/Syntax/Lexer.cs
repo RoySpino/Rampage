@@ -291,83 +291,6 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
-        public SyntaxToken doStructLex()
-        {
-            string line = "", sorc, tmp;
-            int lineLength;
-            string[] arr;
-            MatchCollection mth;
-            SyntaxToken tmpTok;
-            bool Ft, Hv, Em;
-            bool isEOIInList, isIBMSource;
-
-            isIBMSource = false;
-            Ft = (doDecmiation == true);
-            Hv = (strucLexLine.Count > 0);
-            Em = (sourceLines.Count == 0);
-
-            // ----------------------------------------------------------------
-            // THIS IF BLOCK EXECUTES ONLY ONCE
-            // If block only executes when
-            // Ft: On the First Time run or 
-            // Hv: the list strucLexLine has elements (Has a value) or 
-            // Em: sourceLines is not empty
-            if (Ft == true || (Hv == false && Em == false))
-            {
-                // do this only once 
-                // create a list of lines
-                if (doDecmiation == true)
-                {
-                    doDecmiation = false;
-
-                    sorc = Regex.Replace(source.ToString(), @"(\r\n|\n|\0)", "¶");
-                    //sorc = sorc.Substring(0, sorc.Length - 1);
-                    arr = sorc.Split('¶');
-                    isIBMSource = SyntaxFacts.isIBMDoc(arr);
-                    originalSrucLinesCount = arr.Length;
-
-                    // save array as list
-                    sourceLines = new List<string>(arr);
-                }
-
-
-                lineFeeder = new List<StructCard>();
-
-                for (int i = 0; i < sourceLines.Count(); i++)
-                {
-                    // get a line and capatilize all letters but not the strings
-                    line = SyntaxFacts.normalizeLine(sourceLines[i], isIBMSource);
-
-                    // remove comments and add line to list
-                    line = SyntaxFacts.normalizeComments(line);
-
-                    sourceLines[i] = line;
-                    lineFeeder.Add(new StructCard(line, (i + 1)));
-                }
-
-                // get inline declares
-                strucLexLine = Decimator.performCSpecVarDeclar(sourceLines);
-
-                // generate a list of tokens from the soruce code
-                strucLexLine = Decimator.doDecimation(lineFeeder, source, ref _SyntaxTree, ref diagnostics);
-                
-                // check if there is a EOI token in the token list
-                isEOIInList = (from tkn in strucLexLine
-                               select tkn.kind == TokenKind.TK_EOI).FirstOrDefault();
-                if (isEOIInList == false)
-                    strucLexLine.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_EOI, 1, 0, originalSrucLinesCount, 0));
-            }
-            // ----------------------------------------------------------------
-
-            // treat list like a que when the lexer is called
-            // pop the first element from the token list and return it
-            tmpTok = strucLexLine[0];
-            strucLexLine.RemoveAt(0);
-
-            return tmpTok;
-        }
-
-        // ////////////////////////////////////////////////////////////////////////////////////
         private bool checkFree()
         {
             string vlu;
@@ -1088,7 +1011,8 @@ namespace rpgc.Syntax
                     }
                 }
 
-                // special case for else add block end befor else
+                // special case for else
+                // add block end before else
                 if (tok.kind == TokenKind.TK_ELSE)
                     ret.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
 
