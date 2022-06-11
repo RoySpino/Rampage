@@ -94,12 +94,19 @@ namespace rpgc.Binding
 
             }
 
-            // daete conversion
+            // date conversion
             if (from == TypeSymbol.Date || from == TypeSymbol.DateTime)
             {
                 if (to == TypeSymbol.DateTime || to == TypeSymbol.Date)
                     return Conversion.EXPLICIT;
 
+            }
+
+            // to string
+            if (from == TypeSymbol.Integer || from == TypeSymbol.Float || from == TypeSymbol.Date || from == TypeSymbol.DateTime)
+            {
+                if (to == TypeSymbol.Char)
+                    return Conversion.EXPLICIT;
             }
 
             return Conversion.NONE;
