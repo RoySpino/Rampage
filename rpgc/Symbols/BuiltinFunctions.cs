@@ -39,21 +39,11 @@ namespace rpgc.Symbols
 
         internal static IEnumerable<FunctionSymbol> getAll()
         {
-            List<FunctionSymbol> lst = new List<FunctionSymbol>();
-
             // get all properties in this class that are public or static and 
             // generate a list of funciton symbols
             return (from ls in typeof(BuiltinFunctions).GetFields(BindingFlags.Public | BindingFlags.Static)
                    where ls.FieldType == typeof(FunctionSymbol)
                    select (FunctionSymbol)ls.GetValue(null)).ToArray();
-
-            /*
-            foreach (var x in typeof(BuiltinFunctions).GetFields(BindingFlags.Public | BindingFlags.Static))
-                if (x.FieldType == typeof(FunctionSymbol))
-                    lst.Add((FunctionSymbol)x.GetValue(null));
-
-            return lst.ToArray();
-            */
         }
     }
 }

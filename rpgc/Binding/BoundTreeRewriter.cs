@@ -29,6 +29,8 @@ namespace rpgc.Binding
                     return rewriteBoundForStatement((BoundForStatement)node);
                 case BoundNodeToken.BNT_DOUNTIL:
                     return rewriteBoundDoUntilStatement((BoundUntilStatement)node);
+                case BoundNodeToken.BNT_SELECTSTMT:
+                    return rewriteBoundSelectStatement((BoundSelectWhenStatement)node);
                 case BoundNodeToken.BNT_LABEL:
                     return rewriteBoundLabelStatement((BoundLabelStatement)node);
                 case BoundNodeToken.BNT_GOTO:
@@ -328,6 +330,39 @@ namespace rpgc.Binding
                 return node;
 
             return new BoundUntilStatement(condition, body, node.BreakLbl, node.ContinueLbl);
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////
+        protected virtual BoundStatement rewriteBoundSelectStatement(BoundSelectWhenStatement node)
+        {
+            ImmutableArray<BoundExpression> conditionList = node.BoundExpressions;
+            ImmutableArray<BoundStatement> whenBodiesLst = node.BoundStatements;
+            ImmutableArray<BoundExpression>.Builder newConditionList;
+            ImmutableArray<BoundStatement>.Builder newWhenBodiesLst;
+            BoundBlockStatement defaultBlock;
+            BoundStatement tmpStatemnt;
+
+            newConditionList = ImmutableArray.CreateBuilder<BoundExpression>();
+            newWhenBodiesLst = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            // create new flatten condition expressions
+            foreach (BoundExpression condition in conditionList)
+                newConditionList.Add(rewriteExpression(condition));
+
+            // flaten the WHEN blocks
+            foreach (BoundStatement body in whenBodiesLst)
+                newWhenBodiesLst.Add(rewriteStatement(body));
+
+            // prepare the default block
+            tmpStatemnt = node.DefualtStatements;
+            defaultBlock = null;
+
+            // rewrite the OTHER (default) block
+            if (tmpStatemnt != null)
+                defaultBlock = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(rewriteStatement(tmpStatemnt)));
+
+            // create new flaten SELECT statement
+            return new BoundSelectWhenStatement(newConditionList.ToImmutableArray(), newWhenBodiesLst.ToImmutableArray(), defaultBlock);
         }
 
         // /////////////////////////////////////////////////////////////////////////////

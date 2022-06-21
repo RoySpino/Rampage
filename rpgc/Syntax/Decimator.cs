@@ -21,14 +21,14 @@ namespace rpgc.Syntax
         static int assignmentCnt;
         static bool onEvalLine, onBooleanLine;
         static int parenCnt = 0;
-        static string lineType = "", curOp="", prevOp="";
+        static string lineType = "", prevOp="";
         static string factor, DBlockType;
         static int pos, sSize, linePos;
         private static SyntaxToken TopToken;
         private static List<SyntaxToken> localTokenLst = new List<SyntaxToken>();
         private static List<SyntaxToken> localTokenLst2 = new List<SyntaxToken>();
         private static List<SyntaxToken> localCSpecDclr = new List<SyntaxToken>();
-        private static int ITagCnt = 0, PrPi_Idx=-1;
+        private static int ITagCnt = 0;
         private static SyntaxTree sTree_;
         private static SourceText source;
         private static TextLocation location;
@@ -37,6 +37,7 @@ namespace rpgc.Syntax
             doAddMainFunciton = true,
             doAddMainProcEnd = false,
             doAddMainProcSrt = true,
+            onSelectStart = false,
             doMainInjectBeforEOF = false;
 
         private static bool isGoodSpec(char spec, int line)
@@ -383,7 +384,6 @@ namespace rpgc.Syntax
         // //////////////////////////////////////////////////////////////////////////
         internal static List<SyntaxToken> performCSpecVarDeclar(List<string> arr)
         {
-            List<StructNode> nlist = new List<StructNode>();
             List<string> lstVars = new List<string>();
             SyntaxToken[] tNodeArr;
             string decSize, intSize, varName, chkr, kwrd;
@@ -1826,6 +1826,7 @@ namespace rpgc.Syntax
                         lineType = "";
                         break;
                     case "ENDSL":
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ENDSL, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         lineType = "";
@@ -1963,6 +1964,11 @@ namespace rpgc.Syntax
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
+                    case "SELECT":
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SELECT, OP.linePos, (OP.chrPos), "SELECT", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        onSelectStart = true;
+                        break;
                     case "SETON":
                     case "SETOFF":
                         for (int i = 0; i < 3; i++)
@@ -1987,6 +1993,29 @@ namespace rpgc.Syntax
                         ret.Add(tToken);
                         ret.AddRange(doLex(FAC1));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        break;
+                    case "OTHER":
+                    case "WHEN":
+                        lineType = OP.symbol;
+
+                        // close the preveouse block if any
+                        if (onSelectStart == false)
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        else
+                            onSelectStart = false;
+
+
+                        // Add condition statment
+                        if (lineType == "WHEN")
+                        {
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_WHEN, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                            ret.AddRange(doLex(FAC2));
+                        }
+                        else
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_OTHER, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         break;
                     case "GOTO":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_GOTO, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
@@ -2032,7 +2061,6 @@ namespace rpgc.Syntax
         {
             List<SyntaxToken> ret = new List<SyntaxToken>();
             string dclType;
-            TokenKind tk;
 
             dclType = lst[3].symbol;
             inDecareBlock = true;

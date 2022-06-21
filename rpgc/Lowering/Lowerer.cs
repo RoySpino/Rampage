@@ -271,32 +271,31 @@ namespace rpgc.Lowering
              * enddo;
              * 
              * 
-             * goto checkLable
              * continueLable:
+             * gotoWhenFalse <condition> endLabel
              * <body>
-             * checkLable:
-             * gotoTrue <condition> continueLable
+             * goto continueLable
              * endLable:
              * 
             */
-            //BoundLabel endLable, checkLable, continueLable;
-            BoundLabel checkLable;
-            BoundGoToStatement gotoCheck;
+            //BoundLabel endLable, checkLable, BreakLable;
+            //BoundLabel checkLable;
+            //BoundGoToStatement gotoCheck;
+            //BoundLabelStatement checkLableStatement;
+            //BoundGoToConditionalStatement gotoTrue;
             BoundLabelStatement continueLableStatement;
-            BoundLabelStatement checkLableStatement;
-            BoundGoToConditionalStatement gotoTrue;
             BoundLabelStatement endLableStatement;
             BoundBlockStatement result;
+            BoundGoToConditionalStatement gotoWhenFalse;
+            BoundGoToStatement gotoStart;
 
             //continueLable = generateLable();
-            checkLable = generateLable();
+            //checkLable = generateLable();
             //endLable = generateLable();
 
-            gotoCheck = new BoundGoToStatement(checkLable);
-            continueLableStatement = new BoundLabelStatement(node.ContinueLbl);
-            checkLableStatement = new BoundLabelStatement(checkLable);
-            gotoTrue = new BoundGoToConditionalStatement(node.ContinueLbl, node.Condition, true);
-            endLableStatement = new BoundLabelStatement(node.BreakLbl);
+            //gotoCheck = new BoundGoToStatement(checkLable);
+            //checkLableStatement = new BoundLabelStatement(checkLable);
+            //gotoTrue = new BoundGoToConditionalStatement(node.ContinueLbl, node.Condition, true);
 
             /*
             result = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
@@ -313,8 +312,10 @@ namespace rpgc.Lowering
 
 
 
-            var gotoWhenFalse = new BoundGoToConditionalStatement(node.BreakLbl, node.Condition);
-            var gotoStart = new BoundGoToStatement(node.ContinueLbl);
+            continueLableStatement = new BoundLabelStatement(node.ContinueLbl);
+            endLableStatement = new BoundLabelStatement(node.BreakLbl);
+            gotoWhenFalse = new BoundGoToConditionalStatement(node.BreakLbl, node.Condition);
+            gotoStart = new BoundGoToStatement(node.ContinueLbl);
 
 
             result = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
@@ -326,6 +327,110 @@ namespace rpgc.Lowering
             ));
 
             return rewriteStatement(result);
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////
+        protected override BoundStatement rewriteBoundSelectStatement(BoundSelectWhenStatement node)
+        {
+            /* 
+             * select
+             *     when <condition> ;
+             *         <block statement 1>
+             *     otherwise ;
+             *         <block statement 2>
+             * endsl;
+             * 
+             * 
+             * 
+             * gotoWhenFalse <condition> LBL_cond_1
+             * gotoWhenFalse <condition> LBL_cond_2
+             * goto LBL_cond_other
+             * LBL_cond_1:
+             *     <block statement 1>
+             *     goto LBL_end
+             * LBL_cond_2:
+             *     <block statement 2>
+             *     goto LBL_end
+             * LBL_cond_other
+             *     <block statement 1>
+             *     goto LBL_end
+             * end_Lable:
+             * 
+            */
+            ImmutableArray<BoundStatement>.Builder conditionTable;
+            ImmutableArray<BoundStatement>.Builder blockTable;
+            ImmutableArray<BoundStatement>.Builder ret;
+            BoundLabel endLable, tmpLbl;
+            BoundGoToStatement gotoOtherwiseStatement, gotoEND;
+            BoundBlockStatement result;
+            BoundLabelStatement endLableStatement, tmpLableStatement;
+            BoundGoToConditionalStatement gotoWhenFalse;
+            int lim;
+
+
+            lim = node.BoundExpressions.Length;
+            conditionTable = ImmutableArray.CreateBuilder<BoundStatement>();
+            blockTable = ImmutableArray.CreateBuilder<BoundStatement>();
+            ret = ImmutableArray.CreateBuilder<BoundStatement>();
+
+
+            endLable = generateLable();
+            endLableStatement = new BoundLabelStatement(endLable);
+            gotoEND = new BoundGoToStatement(endLable);
+
+            // rebind the statments and conditions
+            for (int i=0; i<lim; i++)
+            {
+                tmpLbl = generateLable();
+                tmpLableStatement = new BoundLabelStatement(tmpLbl);
+                gotoWhenFalse = new BoundGoToConditionalStatement(tmpLbl, node.BoundExpressions[i], false);
+
+                // build CONDITION table
+                conditionTable.Add(gotoWhenFalse);
+
+                // rebuild WHERE blocks
+                blockTable.Add(new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
+                    tmpLableStatement,
+                    node.BoundStatements[i],
+                    gotoEND
+                    )));
+            }
+
+            // an Otherwise keyword was use
+            // add it to the lists
+            if (node.DefualtStatements != null)
+            {
+                tmpLbl = generateLable();
+                tmpLableStatement = new BoundLabelStatement(tmpLbl);
+                gotoOtherwiseStatement = new BoundGoToStatement(tmpLbl);
+
+                // add a goto at the end of the condition list
+                conditionTable.Add(gotoOtherwiseStatement);
+
+                // add the default block to the WHERE list
+                blockTable.Add(new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
+                    tmpLableStatement,
+                    node.DefualtStatements,
+                    gotoEND
+                    )));
+            }
+            else
+            {
+                // no default case was found
+                // add a GOTO to skip all WHEN blocks
+                conditionTable.Add(gotoEND);
+            }
+
+            // add end lable to block list
+            blockTable.Add(endLableStatement);
+
+            // combine statements into one list
+            ret.AddRange(conditionTable);
+            ret.AddRange(blockTable);
+
+            result = new BoundBlockStatement(ret.ToImmutable());
+
+            return result;
         }
     }
 }

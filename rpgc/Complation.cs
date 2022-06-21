@@ -19,7 +19,6 @@ namespace rpgc
         public ImmutableArray<SyntaxTree> SyntaxTrees { get; }
         public Complation Previous { get; }
         public bool IsScript { get; } 
-        private DiagnosticBag diognost = new DiagnosticBag();
         private BoundGlobalScope _globalScope;
 
         /*
@@ -88,17 +87,15 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////////////////////////////////////
         internal void emitTree(TextWriter writer)
         {
-            var pgm = getProgram();
+            bool isMain, isScript;
 
-            if (_globalScope.MainFunction != null)
-            {
+            isMain = _globalScope.MainFunction != null;
+            isScript = _globalScope.ScriptFunciton != null;
+
+            if (isMain == true && isScript == false)
                 emitTree(_globalScope.MainFunction, writer);
-            }
             else
-            {
-                if(_globalScope.ScriptFunciton != null)
-                    emitTree(_globalScope.ScriptFunciton, writer);
-            }
+                emitTree(_globalScope.ScriptFunciton, writer);
         }
 
         // //////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,12 +145,9 @@ namespace rpgc
         public EvaluationResult evalate(Dictionary<VariableSymbol, object> _variables)
         {
             ImmutableArray<Diagnostics> diognos;
-            BoundBlockStatement st;
             BoundProgram program;
             Evaluator eval;
             object value;
-            string appPath, appDir, cfgFlags;
-            ControlFlowGraph cfg;
             IEnumerable<Diagnostics> parseDiagno;
 
             // collect all diagnostics from all syntax trees

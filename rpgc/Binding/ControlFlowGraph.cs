@@ -23,15 +23,16 @@ namespace rpgc.Binding
         }
 
         // /////////////////////////////////////////////////////////////////////////////
+        string Quote(string text)
+        {
+            return "\"" + text.TrimEnd().Replace("\\", "\\\\").Replace(Environment.NewLine, "\\l") + "\"";
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////
         public void WriteTo(TextWriter writer)
         {
             Dictionary<BasicBlock, string> blockIds;
             string id, label, fromId, toId;
-
-            string Quote(string text)
-            {
-                return "\"" + text.TrimEnd().Replace("\\", "\\\\").Replace(Environment.NewLine, "\\l") + "\"";
-            }
 
             writer.WriteLine("digraph G {");
 
@@ -240,6 +241,8 @@ namespace rpgc.Binding
                 BasicBlock toBlock, thenBlock, next, elseBlock, current;
                 BoundGoToConditionalStatement cgs;
                 BoundExpression negatedCondition, thenCondition, elseCondition;
+                BoundLabelStatement labelStatement;
+                BoundLabel tmpLabel;
                 bool isLastStatementInBlock;
 
                 if (!blocks.Any())
@@ -251,10 +254,20 @@ namespace rpgc.Binding
                 {
                     foreach (var statement in block.Statements)
                     {
-                        _blockFromStatement.Add(statement, block);
-                        
-                        if (statement is BoundLabelStatement labelStatement)
-                            _blockFromLabel.Add(labelStatement.Label, block);
+                        // add only unique keys
+                        if (_blockFromStatement.ContainsKey(statement) == false)
+                            _blockFromStatement.Add(statement, block);
+
+                        // check if the statment is a label
+                        if (statement is BoundLabelStatement)
+                        {
+                            labelStatement = (BoundLabelStatement)statement;
+                            tmpLabel = labelStatement.Label;
+
+                            // add only unique labels
+                            if (_blockFromLabel.ContainsKey(tmpLabel) == false)
+                                _blockFromLabel.Add(tmpLabel, block);
+                        }
                     }
                 }
 

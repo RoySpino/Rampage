@@ -108,13 +108,13 @@ namespace rpgc.Binding
                 statment = _binder.BindGlobalStatements(gblStmnt.Statement);
                 statementBuilder.Add(statment);
             }
+            functon = _binder.scope.getDeclaredFunctions();
 
             // global instructions can only occur in a scripting mode
             // they cannot exist when there is a dedicated main function
             if (isScript == false)
             {
                 // find the main funciton
-                functon = _binder.scope.getDeclaredFunctions();
                 mainFunctionArr = (from func in functon
                                    where func.Name == "MAIN"
                                    select func).ToArray();
@@ -126,6 +126,8 @@ namespace rpgc.Binding
                     switch (mainFunctionArr.Length)
                     {
                         case 0:
+                            tDiagonostics = diag.ToImmutableArray();
+                            vars = _binder.scope.getDeclaredVariables();
                             return new BoundGlobalScope(prev, tDiagonostics, functon, vars, null, null, statementBuilder.ToImmutable());
                         case 1:
                             mainFunction = mainFunctionArr[0];
@@ -275,7 +277,6 @@ namespace rpgc.Binding
         private static BoundScope createParantScope(BoundGlobalScope prev)
         {
             Stack<BoundGlobalScope> stk = new Stack<BoundGlobalScope>();
-            BoundGlobalScope tmp;
             BoundScope parant = null;
             BoundScope _scope = null;
 
@@ -394,13 +395,14 @@ namespace rpgc.Binding
                     return BindBreakStatement((BreakStamentSyntax)syntax);
                 case TokenKind.TK_RETURN:
                     return BindReturnStatement((ReturnStatementSyntax)syntax);
+                case TokenKind.TK_SELECT:
+                    return BindSelectStatement((SelectStatementSyntax)syntax);
                 case TokenKind.TK_BADTOKEN:
                     return new BoundErrorStatement();
                 default:
                     throw new Exception(string.Format("Unexpected Syntax {0}", syntax.kind));
             }
         }
-
 
         // ///////////////////////////////////////////////////////////////////////////////
         private BoundExpression BindExpressionInternal(ExpresionSyntax syntax)
@@ -856,6 +858,41 @@ namespace rpgc.Binding
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
+        private BoundStatement BindSelectStatement(SelectStatementSyntax syntax)
+        {
+            BoundExpression condition;
+            BoundStatement whenStatement;
+            ImmutableArray<BoundStatement>.Builder blocks;
+            ImmutableArray<BoundExpression>.Builder conditions;
+            ImmutableArray<BoundStatement>.Builder tmp;
+            BoundStatement defaultCase;
+            int lim;
+
+            blocks = ImmutableArray.CreateBuilder<BoundStatement>();
+            conditions = ImmutableArray.CreateBuilder<BoundExpression>();
+            defaultCase = null;
+            lim = syntax.whenCond.Count;
+
+            for (int i=0; i<lim; i++)
+            {
+                // set condition and when statments
+                condition = BindExpression(syntax.whenCond[i], TypeSymbol.Indicator);
+                whenStatement = BindStatements(syntax.whenBdy[i]);
+
+                blocks.Add(whenStatement);
+                conditions.Add(condition);
+            }
+
+            // add the default case
+            if (syntax.DefaultBody != null)
+            {
+                defaultCase = BindStatements(syntax.DefaultBody);
+            }
+
+            return new BoundSelectWhenStatement(conditions.ToImmutable(), blocks.ToImmutable(), defaultCase);
+        }
+
+        // ///////////////////////////////////////////////////////////////////////////////
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
         {
             BoundExpression condition;
@@ -1093,9 +1130,6 @@ namespace rpgc.Binding
         {
             BoundExpression left, right;
             BoundBinOperator boundOperatorKind;
-            TypeSymbol ctyp;
-
-            //BindConversion(syntax)
 
             left = BindExpression(syntax.left);
             right = BindExpression(syntax.right);
@@ -1242,7 +1276,8 @@ namespace rpgc.Binding
         BNT_CALLEXP,
         BNT_CONVEXP,
         BNT_RETSTMT,
-        BNT_NOOP
+        BNT_NOOP,
+        BNT_SELECTSTMT
     }
 
     public enum BoundUniOpToken

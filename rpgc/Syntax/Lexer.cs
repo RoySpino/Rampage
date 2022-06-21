@@ -387,7 +387,7 @@ namespace rpgc.Syntax
                     break;
                 case '*':
                     start += 1;
-                    symbol = readCompilerConstantsOrMult();
+                    readCompilerConstantsOrMult();
                     break;
                 case '/':
                     start += 1;

@@ -261,6 +261,7 @@ namespace rpgc.Syntax
                 case "CALLB":
                 case "IF":
                 case "RETURN":
+                case "WHEN":
                     return true;
                 default:
                     return false;

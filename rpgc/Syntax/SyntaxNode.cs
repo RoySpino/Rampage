@@ -15,7 +15,7 @@ namespace rpgc.Syntax
         public abstract TokenKind kind { get; }
         public SyntaxTree STREE { get; }
 
-        private protected SyntaxNode(SyntaxTree sTree)
+        protected SyntaxNode(SyntaxTree sTree)
         {
             STREE = sTree;
         }

@@ -28,7 +28,6 @@ namespace rpgc.Text
         public static ImmutableArray<TextLine> parseLines(SourceText sourceText, string text)
         {
             ImmutableArray<TextLine>.Builder ret;
-            TextLine line;
             int lineStart, lineBreakWdith;
             int pos;
 

@@ -49,8 +49,6 @@ namespace rpgc
             program = null;
             ROOT = root;
             _Globals = _variables;
-
-            var c = program;
         }
 
         // //////////////////////////////////////////////////////////////
@@ -251,7 +249,6 @@ namespace rpgc
         // //////////////////////////////////////////////////////////////
         private Object arithmaticEvaluater(Object A, Object B, string TypeName, BoundBinOpToken Operation)
         {
-            Object ret;
             int i_AA, i_BB;
             double d_AA, d_BB;
             bool onFloat;
@@ -610,24 +607,12 @@ namespace rpgc
         private void evaluateVariableDaclaration(boundVariableDeclaration node)
         {
             object value;
-            Dictionary<VariableSymbol, object> tmpLocalStack;
 
             value = reEvaluate(node.Initalizer);
-            //_Globals[node.Variable] = value;
+
             lastValue = value;
 
             performAssignment(node.Variable, value);
-            /*
-            if (node.Variable.kind == SymbolKind.SYM_GLOBALVAR)
-            {
-                _Globals[node.Variable] = value;
-            }
-            else
-            {
-                tmpLocalStack = _locals.Peek();
-                tmpLocalStack[node.Variable] = value;
-            }
-            */
         }
 
         // //////////////////////////////////////////////////////////////
@@ -664,7 +649,6 @@ namespace rpgc
         private object evaluateAssignmentExpression(BoundAssignmentExpression atmp)
         {
             object value;
-            Dictionary<VariableSymbol, object> lcl;
 
             // get value
             value = reEvaluate(atmp.Expression);
@@ -705,12 +689,11 @@ namespace rpgc
             BoundStatement smt;
             BoundGoToConditionalStatement cgts;
             BoundGoToStatement gs;
-            BoundBlockStatement body;
+
             int index;
             bool cond;
             string lblName;
 
-            body = ROOT;
             index = 0;
             lableToIndex = new Dictionary<string, int>();
 

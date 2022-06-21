@@ -116,12 +116,15 @@ namespace rpgc.Syntax
                     return parseBreakStatement();
                 case TokenKind.TK_RETURN:
                     return parseReturnStatement();
+                case TokenKind.TK_SELECT:
+                    return parseSelectStatement();
                 case TokenKind.TK_BADTOKEN:
                     return new ErrorStatementSyntax(_sTree);
                 default:
                     return parseExpressionStaement();
             }
         }
+
         // ///////////////////////////////////////////////////////////////////////
         SyntaxToken nextToken()
         {
@@ -225,11 +228,15 @@ namespace rpgc.Syntax
             ExpresionSyntax right;
             ExpresionSyntax ret;
             SyntaxToken identifierToken, operatorToken;
+            SyntaxToken peek_1, peek_0;
+
+            peek_0 = peek(0);
+            peek_1 = peek(1);
 
             // parce assignment 
-            if (peek(1).kind == TokenKind.TK_ASSIGN)
+            if (peek_1.kind == TokenKind.TK_ASSIGN)
             {
-                if (peek(0).kind == TokenKind.TK_IDENTIFIER && peek(1).kind == TokenKind.TK_ASSIGN)
+                if (peek_0.kind == TokenKind.TK_IDENTIFIER && peek_1.kind == TokenKind.TK_ASSIGN)
                 {
                     identifierToken = nextToken();
                     operatorToken = nextToken();
@@ -238,7 +245,7 @@ namespace rpgc.Syntax
                 }
                 else
                 {
-                    location = new TextLocation(text, peek(1).span);
+                    location = new TextLocation(text, peek_1.span);
                     diagnostics.reportAssignmentWithotResult(location);
                 }
             }
@@ -644,13 +651,70 @@ namespace rpgc.Syntax
         }
 
         // /////////////////////////////////////////////////////////////////////////
+        private StatementSyntax parseSelectStatement()
+        {
+            SyntaxToken keyword, whenKw;
+            ExpresionSyntax condition;
+            StatementSyntax statement;
+            StatementSyntax defaultStmnt;
+            List<StatementSyntax> whenBdy;
+            List<ExpresionSyntax> whenCond;
+
+            whenBdy = new List<StatementSyntax>();
+            whenCond = new List<ExpresionSyntax>();
+            defaultStmnt = null;
+
+            keyword = match(TokenKind.TK_SELECT);
+            catchEndOfLine();
+
+            while (current.kind != TokenKind.TK_ENDSL &&
+                   current.kind != TokenKind.TK_EOI &&
+                   current.kind != TokenKind.TK_BLOCKEND)
+            {
+                whenKw = match(TokenKind.TK_WHEN, TokenKind.TK_OTHER);
+
+                // check if user entered a when/other keyword
+                if (whenKw.kind == TokenKind.TK_BADTOKEN)
+                {
+                    diagnostics.reportUnexpectedSymbol(whenKw.Location(), "When or Other");
+                    return new ErrorStatementSyntax(_sTree);
+                }
+
+                // get the condition on the when keyword then
+                // add condtion to list
+                if (whenKw.kind == TokenKind.TK_WHEN)
+                {
+                    condition = parceExpression();
+                    catchEndOfLine();
+                    whenCond.Add(condition);
+
+                    // colect the statements in the body of the when keyword
+                    statement = parseStaement();
+                    whenBdy.Add(statement);
+                }
+                else
+                {
+                    catchEndOfLine();
+
+                    // parse the default statment
+                    defaultStmnt = parseStaement();
+                }
+            }
+
+            // catch end keyword and end of line
+            match(TokenKind.TK_ENDSL);
+            catchEndOfLine();
+
+            return new Syntax.SelectStatementSyntax(_sTree, keyword, whenCond, whenBdy, defaultStmnt);
+        }
+
+        // /////////////////////////////////////////////////////////////////////////
         private IfStatementSyntax parseIfStaement()
         {
             SyntaxToken keyword;
             ExpresionSyntax condition;
             StatementSyntax statement;
             ElseStatementSyntax elseClause;
-            var curTok = current;
 
             keyword = match(TokenKind.TK_IF);
             condition = parceExpression();
@@ -719,6 +783,7 @@ namespace rpgc.Syntax
                         return new ErrorStatementSyntax(_sTree);
                     }
                 }
+                /*
                 else
                 {
                     // check for type mismatch
@@ -728,6 +793,7 @@ namespace rpgc.Syntax
                         return new ErrorStatementSyntax(_sTree);
                     }
                 }
+                */
             }
 
             return new ReturnStatementSyntax(_sTree, keyword, retExp);
@@ -736,7 +802,7 @@ namespace rpgc.Syntax
         // ///////////////////////////////////////////////////////////////////////
         private StatementSyntax parseConstVariableDeclaration()
         {
-            SyntaxToken keyworkd, identifier, initKeyWord, varType;
+            SyntaxToken keyworkd, identifier;
             ExpresionSyntax initilize;
 
             // get declaration symbol and variable name
@@ -758,10 +824,9 @@ namespace rpgc.Syntax
         // /////////////////////////////////////////////////////////////////////////
         private StatementSyntax parseVariableDeclaration()
         {
-            SyntaxToken keyworkd, identifier, initKeyWord, varType;
+            SyntaxToken keyworkd, identifier, initKeyWord;
             ExpresionSyntax initilize;
             TypeClauseSyntax typClas;
-            TypeSymbol ts = null;
 
             // get declaration symbol and variable name
             // dcl-s name
@@ -984,7 +1049,7 @@ namespace rpgc.Syntax
         // ///////////////////////////////////////////////////////////////////////
         private SeperatedParamiterList<ParamiterSyntax> parseParamiterList()
         {
-            ParamiterSyntax prm, seperator;
+            ParamiterSyntax prm;
             ImmutableArray<SyntaxNode>.Builder nodes = ImmutableArray.CreateBuilder<SyntaxNode>();
 
             while (current.kind != TokenKind.TK_ENDPI && current.kind != TokenKind.TK_EOI)
@@ -1018,10 +1083,8 @@ namespace rpgc.Syntax
             SyntaxToken closeStatementToken;
             SyntaxToken startToken;
             StatementSyntax statmt;
-            TokenKind endToken;
 
             statements = ImmutableArray.CreateBuilder<StatementSyntax>();
-            //openStatementToken = match(TokenKind.TK_BLOCKSTART);
             openStatementToken = null;
 
             // build block body
