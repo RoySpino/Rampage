@@ -339,7 +339,7 @@ namespace rpgc.Binding
             ImmutableArray<BoundStatement> whenBodiesLst = node.BoundStatements;
             ImmutableArray<BoundExpression>.Builder newConditionList;
             ImmutableArray<BoundStatement>.Builder newWhenBodiesLst;
-            BoundBlockStatement defaultBlock;
+            BoundStatement defaultBlock;
             BoundStatement tmpStatemnt;
 
             newConditionList = ImmutableArray.CreateBuilder<BoundExpression>();
@@ -359,7 +359,8 @@ namespace rpgc.Binding
 
             // rewrite the OTHER (default) block
             if (tmpStatemnt != null)
-                defaultBlock = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(rewriteStatement(tmpStatemnt)));
+                defaultBlock = rewriteStatement(node.DefualtStatements);
+                //defaultBlock = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(rewriteStatement(tmpStatemnt)));
 
             // create new flaten SELECT statement
             return new BoundSelectWhenStatement(newConditionList.ToImmutableArray(), newWhenBodiesLst.ToImmutableArray(), defaultBlock);

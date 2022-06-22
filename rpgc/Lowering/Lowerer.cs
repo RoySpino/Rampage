@@ -391,7 +391,7 @@ namespace rpgc.Lowering
                 // rebuild WHERE blocks
                 blockTable.Add(new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
                     tmpLableStatement,
-                    node.BoundStatements[i],
+                    rewriteStatement(node.BoundStatements[i]),
                     gotoEND
                     )));
             }
@@ -410,7 +410,7 @@ namespace rpgc.Lowering
                 // add the default block to the WHERE list
                 blockTable.Add(new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
                     tmpLableStatement,
-                    node.DefualtStatements,
+                    rewriteStatement(node.DefualtStatements),
                     gotoEND
                     )));
             }
