@@ -452,14 +452,17 @@ namespace rpgc.Binding
 
             parms = ImmutableArray.CreateBuilder<ParamiterSymbol>();
             paramiterNames = new HashSet<string>();
+
             if (syntax.Paramiters != null)
             {
+                // go through paramiter lists
                 foreach (ParamiterSyntax pram in syntax.Paramiters)
                 {
                     name = pram.Identifier.sym.ToString();
                     _type = checkVarType(pram.Type, new TextLocation(pram.STREE.TEXT, pram.span));
                     typ = bindTypeClause(_type);
 
+                    // check for unique function paramiters
                     if (paramiterNames.Add(name) == false)
                         diagnostics.reportDuplicateParamiterName(pram.Location(), name, typ.Name);
                     else
@@ -470,10 +473,16 @@ namespace rpgc.Binding
                 }
             }
 
-            name = syntax.ProcedureName.sym.ToString();  //IdentfirePN.sym.ToString();
+            name = syntax.ProcedureName.sym.ToString();
             _type = checkVarType(syntax.ReturnType, new TextLocation(syntax.STREE.TEXT, syntax.span));
-            returnType = bindTypeClause(syntax.ReturnType); //?? TypeSymbol.Void;
+            returnType = bindTypeClause(syntax.ReturnType); 
             procedur = new FunctionSymbol(name, parms.ToImmutable(), returnType, syntax, syntax.isSubroutine);
+
+            // check if return value matches funciton declaration
+            if (SyntaxFacts.lookupTypeName(returnType.Name) != SyntaxFacts.lookupTypeName(syntax.ReturnType.Identifier.sym.ToString()))
+            {
+                diagnostics.reportReturnTypeMismatch(syntax.ReturnType.Location(), returnType.kind.GetTypeCode().ToString(), syntax.ReturnType.Identifier.sym.ToString());
+            }
 
             // check for redeclaration
             if (scope.declareFunction(procedur) == false)
@@ -498,20 +507,6 @@ namespace rpgc.Binding
         private BoundExpression BindExpression(ExpresionSyntax syntax, TypeSymbol expectedResult)
         {
             return BindConversion(syntax, expectedResult);
-            /*
-            BoundExpression result;
-
-            result = BindExpression(syntax);
-
-            // check if expression ican be void
-            if (result.Type != expectedResult)
-            {
-                diagnostics.reportCannotConvert(syntax.span, result.Type, expectedResult);
-                return new BoundErrorExpression();
-            }
-
-            return result;
-            */
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
@@ -597,7 +592,6 @@ namespace rpgc.Binding
             SyntaxNode firstNode;
             ExpresionSyntax lastNode;
             bool isCountGreater, a1;
-            //bool hasErrors = false;
             int argsCnt, fnParamsCnt;
             string name;
 
@@ -700,25 +694,7 @@ namespace rpgc.Binding
 
                 // try to convert the argument to the function expected argument
                 boundArguments[i] = BindConversion(syntax.Arguments[i], parametr.Type);
-
-
-                // check argumet and paramiter types
-                /*
-                if (argument.Type != parametr.type)
-                {
-                    //diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].span, argument.Type, parametr.type);
-                    //return new BoundErrorExpression();
-                    if (argument.Type != TypeSymbol.ERROR)
-                    {
-                        diagnostics.reportFunctionParamiterTypeMismatch(syntax.Arguments[i].Location(), argument.Type, parametr.type);
-                    }
-                    hasErrors = true;
-                }
-                */
             }
-
-            //if (hasErrors == true)
-            //    return new BoundErrorExpression();
 
             // bind function fall
             return new BoundCallExpression(function, boundArguments.ToImmutable());
@@ -977,12 +953,6 @@ namespace rpgc.Binding
             VariableSymbol variable;
             VariableDeclarationSyntax tvar = null;
 
-            //name = syntax.Identifier.sym.ToString();
-            //isReadOnly = (syntax.kind == TokenKind.TK_VARDCONST);
-            //expression = BindExpression(syntax.Initilizer);
-            //variable = new VariableSymbol(name, isReadOnly, expression.Type);
-
-
             expression = BindExpression(syntax.Initilizer);
 
             if (syntax.Keyword.kind == TokenKind.TK_VARDCONST)
@@ -994,12 +964,6 @@ namespace rpgc.Binding
             {
                 variable = bindVariable(syntax, false);
             }
-
-            //if (scope.declare(variable) == false)
-            //{
-            //    diagnostics.reportVariableAleadyDeclared(syntax.span, name);
-            //    return new BoundErrorStatement();
-            //}
 
             return new boundVariableDeclaration(variable, expression);
         }

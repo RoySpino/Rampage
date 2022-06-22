@@ -775,6 +775,7 @@ namespace rpgc.Syntax
                 funcReturns = functionReturns[curSubroutineScope];
 
                 // check for lone retrun statements
+                // RETURN that do not return anything should only be in void funcitons
                 if (retExp == null) 
                 {
                     if (funcReturns != "")
@@ -783,17 +784,6 @@ namespace rpgc.Syntax
                         return new ErrorStatementSyntax(_sTree);
                     }
                 }
-                /*
-                else
-                {
-                    // check for type mismatch
-                    if (SyntaxFacts.lookupTypeName(retExp.kind.GetTypeCode().ToString()) != SyntaxFacts.lookupTypeName(funcReturns))
-                    {
-                        diagnostics.reportReturnTypeMismatch(retExp.Location(), retExp.kind.GetTypeCode().ToString(), funcReturns);
-                        return new ErrorStatementSyntax(_sTree);
-                    }
-                }
-                */
             }
 
             return new ReturnStatementSyntax(_sTree, keyword, retExp);
