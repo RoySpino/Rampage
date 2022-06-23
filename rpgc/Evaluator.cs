@@ -560,6 +560,47 @@ namespace rpgc
 
                 return idx + 1;
             }
+            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Editw)
+            {
+                int idx;
+                char[] tmp;
+                string ret, sinp, nfmt, fmt, inp;
+
+                fmt = reEvaluate((node.Arguments[0])).ToString();
+                inp = reEvaluate((node.Arguments[1])).ToString();
+
+                ret = "";
+                tmp = fmt.ToCharArray();
+                Array.Reverse(tmp);
+                nfmt = new string(tmp);
+
+                sinp = inp;
+                idx = sinp.Length - 1;
+
+                foreach (char ch in nfmt)
+                {
+                    if (ch != ' ')
+                    {
+                        ret += ch;
+                        continue;
+                    }
+
+                    if (idx > -1)
+                    {
+                        ret += sinp[idx];
+                        idx -= 1;
+                    }
+                    else
+                    {
+                        ret += ch;
+                    }
+                }
+
+                tmp = ret.ToCharArray();
+                Array.Reverse(tmp);
+                ret = new string(tmp);
+                return ret;
+            }
             else
             {
                 // handle programmer defigned procedures/subrutines

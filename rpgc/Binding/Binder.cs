@@ -316,7 +316,7 @@ namespace rpgc.Binding
             res = new BoundScope(null);
 
             // declare built in functions
-            foreach (var f in BuiltinFunctions.getAll())
+            foreach (FunctionSymbol f in BuiltinFunctions.getAll())
                 res.declareFunction(f);
 
             // declare builtin variables
@@ -585,7 +585,7 @@ namespace rpgc.Binding
             IEnumerable<FunctionSymbol> BIF;
             ImmutableArray<BoundExpression>.Builder boundArguments;
             FunctionSymbol function;
-            BoundExpression ar, argument;
+            BoundExpression ar, argument, convExpr;
             ParamiterSymbol parametr;
             TypeSymbol a2;
             TextSpan span;
@@ -693,7 +693,9 @@ namespace rpgc.Binding
                 parametr = function.Paramiter[i];
 
                 // try to convert the argument to the function expected argument
-                boundArguments[i] = BindConversion(syntax.Arguments[i], parametr.Type);
+                convExpr = BindConversion(argument, parametr.Type, syntax.Arguments[i].Location(), true);
+
+                boundArguments[i] = convExpr;
             }
 
             // bind function fall

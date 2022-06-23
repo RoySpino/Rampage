@@ -643,6 +643,7 @@ namespace rpgc.Syntax
                                 location = new TextLocation(source, new TextSpan(start, 1, factor_.linePos, factor_.chrPos));
                                 diagnostics.reportBadCharacter(location, curChar, 1);
                                 symbol = curChar.ToString();
+                                nextChar();
                             }
                         }
                         Value = symbol;
