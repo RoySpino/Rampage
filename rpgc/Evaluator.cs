@@ -562,43 +562,50 @@ namespace rpgc
             }
             else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Editw)
             {
-                int idx;
-                char[] tmp;
-                string ret, sinp, nfmt, fmt, inp;
+                int idx, flim;
+                char ch;
+                string ret, fmt, inp;
 
                 fmt = reEvaluate((node.Arguments[0])).ToString();
                 inp = reEvaluate((node.Arguments[1])).ToString();
 
                 ret = "";
-                tmp = fmt.ToCharArray();
-                Array.Reverse(tmp);
-                nfmt = new string(tmp);
+                flim = fmt.Length - 1;
+                idx = inp.Length - 1;
 
-                sinp = inp;
-                idx = sinp.Length - 1;
-
-                foreach (char ch in nfmt)
+                //foreach (char ch in nfmt)
+                for (int i=flim; i > -1; i--)
                 {
+                    ch = fmt[i];
+
                     if (ch != ' ')
                     {
-                        ret += ch;
+                        ret = ch + ret;
                         continue;
                     }
 
+                    // apply input string to the returning string
                     if (idx > -1)
                     {
-                        ret += sinp[idx];
+                        ret = inp[idx] + ret;
                         idx -= 1;
                     }
                     else
                     {
-                        ret += ch;
+                        // at the end of the input string 
+                        // apply the format string
+                        ret = ch + ret;
                     }
                 }
 
-                tmp = ret.ToCharArray();
-                Array.Reverse(tmp);
-                ret = new string(tmp);
+                // input string is longer than format
+                if (idx > -1)
+                    while (idx > -1)
+                    {
+                        ret = inp[idx] + ret;
+                        idx -= 1;
+                    }
+
                 return ret;
             }
             else
