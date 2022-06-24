@@ -30,7 +30,7 @@ namespace rpgc
                 */
                 //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\test4.rpg" };
                 //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\RPMult2.rpg" };
-                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\editw.rpg" };
+                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\YIN_FREE.rpg" };
                 doCompile(ar);
             }
             else

@@ -554,6 +554,7 @@ namespace rpgc
                 source = reEvaluate((node.Arguments[1])).ToString();
 
                 source.Reverse();
+                fromStr.Reverse();
                 var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
                 idx = mtch.Index;
                 idx = (source.Length - 1) - idx;

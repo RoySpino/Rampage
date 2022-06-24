@@ -33,6 +33,7 @@ namespace rpgc.Syntax
         private SyntaxTree _SyntaxTree;
         private int originalSrucLinesCount;
         private List<SyntaxToken> MainProcedureInterface = new List<SyntaxToken>();
+        private Regex declarBlkEnd = new Regex(@"(?i)^end-(pi|pr|ds)", RegexOptions.IgnoreCase);
 
         int start;
         TokenKind kind;
@@ -60,8 +61,8 @@ namespace rpgc.Syntax
         // ////////////////////////////////////////////////////////////////////////////////////
         private bool isGoodSpec(string spec, int line)
         {
-            Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
-            Dictionary<string, int> procSpec = new Dictionary<string, int>() { { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "C", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
+            Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "¢", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
+            Dictionary<string, int> procSpec = new Dictionary<string, int>() { { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "¢", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> mainDic = null;
             string curSpec;
 
@@ -76,17 +77,17 @@ namespace rpgc.Syntax
             // set D block flag
             if (SyntaxFacts.isInDBlock(spec) == true)
             {
-                if (spec.Contains("END-") == true)
+                isInDBLock = true;
+             
+                if (declarBlkEnd.Match(spec).Success == true)
                     isInDBLock = false;
-                else
-                    isInDBLock = true;
             }
 
             // invalid specification found
             // assign D or C spec
             if (mainDic.ContainsKey(curSpec) == false)
             {
-                curSpec = "C";
+                curSpec = "¢";
 
                 if (isInDBLock == true)
                     curSpec = "DCL-S";

@@ -962,6 +962,7 @@ namespace rpgc.Syntax
             isSub = (current.sym.ToString() == "BEGSR");
             funcDclar = match(TokenKind.TK_PROCDCL);
             identifier = match(TokenKind.TK_IDENTIFIER);
+
             if (identifier.kind == TokenKind.TK_BADTOKEN)
                 return new ErrorMemberSyntax(_sTree);
             catchEndOfLine();
