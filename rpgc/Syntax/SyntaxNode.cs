@@ -77,8 +77,10 @@ namespace rpgc.Syntax
         // /////////////////////////////////////////////////////////////////////////
         public SyntaxToken GetLastToken()
         {
-            if (this is SyntaxToken token)
-                return token;
+            SyntaxToken token;
+            
+            if (this is SyntaxToken)
+                return this;
 
             // A syntax node should always contain at least 1 token.
             return getCildren().Last().GetLastToken();
@@ -88,11 +90,12 @@ namespace rpgc.Syntax
         private static void printTree(TextWriter textWriter, SyntaxNode node, string indent = "", bool isLast = true)
         {
             SyntaxNode lastChild;
+            string marker;
 
             if (node == null)
                 return;
 
-            string marker = ((isLast == true) ? "└──" : "├──");
+            marker = ((isLast == true) ? "└──" : "├──");
             textWriter.Write(indent + marker + node.kind);
 
             if (node is SyntaxToken)
@@ -120,7 +123,7 @@ namespace rpgc.Syntax
         // /////////////////////////////////////////////////////////////////////////
         public override string ToString()
         {
-            using (var writer = new StringWriter())
+            using (StringWriter writer = new StringWriter())
             {
                 writeTo(writer);
                 return writer.ToString();
