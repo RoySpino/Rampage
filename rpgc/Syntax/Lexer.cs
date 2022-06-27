@@ -34,6 +34,7 @@ namespace rpgc.Syntax
         private int originalSrucLinesCount;
         private List<SyntaxToken> MainProcedureInterface = new List<SyntaxToken>();
         private Regex declarBlkEnd = new Regex(@"(?i)^end-(pi|pr|ds)", RegexOptions.IgnoreCase);
+        private bool onSelectStart;
 
         int start;
         TokenKind kind;
@@ -53,7 +54,9 @@ namespace rpgc.Syntax
             lineNum = 1;
             prevLine = -1;
             specChkStr = "CTL-OPT";
-            
+            onSelectStart = true;
+
+
 
             nextChar();
         }
@@ -587,7 +590,7 @@ namespace rpgc.Syntax
 
             // at end of line check for end/start of a block
             // otherwise set kind to space token
-            if (lineType.Length > 0 && (curChar == 10 || curChar == 13))
+            if (String.IsNullOrEmpty(lineType) == false  && (curChar == 10 || curChar == 13))
             {
                 // get and reset linetype
                 getLineType(lineType);
@@ -934,20 +937,21 @@ namespace rpgc.Syntax
             // if there is a lineType set a
             switch (symbol)
             {
-                //case "DCL-PROC":
-                //case "BEGSR":
                 case "DOU":
                 case "DOW":
                 case "ELSE":
                 case "FOR":
                 case "IF":
                 case "MON":
+                case "WHEN":
+                case "OTHER":
                     kind = TokenKind.TK_BLOCKSTART;
                     return;
                 case "ENDDO":
                 case "ENDFOR":
                 case "ENDIF":
                 case "ENDMON":
+                case "ENDSR":
                     kind = TokenKind.TK_BLOCKEND;
                     return;
             }
@@ -972,6 +976,8 @@ namespace rpgc.Syntax
                     case "MON":
                     case "MONITOR":
                     case "ELSE":
+                    case "WHEN":
+                    case "OTHER":
                         lineType = symbol;
                         break;
                 }
@@ -1012,10 +1018,29 @@ namespace rpgc.Syntax
                     }
                 }
 
-                // special case for else
-                // add block end before else
-                if (tok.kind == TokenKind.TK_ELSE)
-                    ret.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
+                // add extra tokens before the lexed token
+                switch (tok.kind)
+                {
+                    case TokenKind.TK_ELSE:
+                        // special case for else
+                        // add block end before else
+                        ret.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_ENDIF, tok.line, tok.pos, ""));
+                        break;
+                    case TokenKind.TK_ENDSL:
+                        ret.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_BLOCKEND, tok.line, tok.pos, ""));
+                        break;
+                    case TokenKind.TK_WHEN:
+                    case TokenKind.TK_OTHER:
+                        if (onSelectStart == false)
+                            ret.Add(new SyntaxToken(_SyntaxTree, TokenKind.TK_BLOCKEND, tok.line, tok.pos, ""));
+                        else
+                            onSelectStart = false;
+                        break;
+                    case TokenKind.TK_SELECT:
+                        // reset when block
+                        onSelectStart = true;
+                        break;
+                }
 
                 // save avalable tokens skipping nulls and space
                 if (tok == null || tok.kind == TokenKind.TK_SPACE || tok.kind == TokenKind.TK_BADTOKEN)

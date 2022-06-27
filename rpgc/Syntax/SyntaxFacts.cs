@@ -228,6 +228,8 @@ namespace rpgc.Syntax
                     return TokenKind.TK_MONITOR;
                 case "OR":
                     return TokenKind.TK_OR;
+                case "OTHER":
+                    return TokenKind.TK_OTHER;
                 case "SELECT":
                     return TokenKind.TK_SELECT;
                 case "SUB":
@@ -240,6 +242,8 @@ namespace rpgc.Syntax
                     return TokenKind.TK_LEAVE;
                 case "RETURN":
                     return TokenKind.TK_RETURN;
+                case "WHEN":
+                    return TokenKind.TK_WHEN;
                 default:
                     return TokenKind.TK_IDENTIFIER;
             }
@@ -415,6 +419,7 @@ namespace rpgc.Syntax
             return (ishere != null);
         }
 
+        // //////////////////////////////////////////////////////////////////////////////////
         public static TokenKind getFreeFormatKind(string kw, bool onFree = false)
         {
             string kwl;
@@ -607,6 +612,7 @@ namespace rpgc.Syntax
                 case "N":
                     return Symbols.TypeSymbol.Indicator;
                 case "INT(10)":
+                case "INT":
                 case "ZONED":
                 case "PACKED":
                 case "FLOAT":

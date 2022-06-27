@@ -832,6 +832,7 @@ namespace rpgc.Syntax
                 case "FOR":
                 case "IF":
                 case "MONITOR":
+                case "WHEN":
                     lineType = symbol;
                     break;
             }
@@ -921,6 +922,7 @@ namespace rpgc.Syntax
                 case "FOR":
                 case "IF":
                 case "MONITOR":
+                case "WHEN":
                     kind = TokenKind.TK_BLOCKSTART;
                     return;
             }

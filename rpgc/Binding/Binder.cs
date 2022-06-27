@@ -244,11 +244,13 @@ namespace rpgc.Binding
 
             if (gblScope.MainFunction == null && gblScope.Statements.Any())
             {
+                // scripting mode
                 loweredBody = Lowering.Lowerer.Lower(new BoundBlockStatement(gblScope.Statements));
                 functionBodies.Add(gblScope.ScriptFunciton, loweredBody);
             }
             else
             {
+                // regular compilation
                 if (gblScope.ScriptFunciton != null)
                 {
                     statements = gblScope.Statements;
@@ -467,6 +469,7 @@ namespace rpgc.Binding
                         diagnostics.reportDuplicateParamiterName(pram.Location(), name, typ.Name);
                     else
                     {
+                        // create function paramter
                         par = new ParamiterSymbol(name, typ);
                         parms.Add(par);
                     }

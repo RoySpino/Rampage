@@ -78,9 +78,12 @@ namespace rpgc.Syntax
         public SyntaxToken GetLastToken()
         {
             SyntaxToken token;
-            
+
             if (this is SyntaxToken)
-                return this;
+            {
+                token = (SyntaxToken)this;
+                return token;
+            }
 
             // A syntax node should always contain at least 1 token.
             return getCildren().Last().GetLastToken();

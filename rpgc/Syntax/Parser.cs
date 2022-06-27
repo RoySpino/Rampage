@@ -955,7 +955,7 @@ namespace rpgc.Syntax
             SeperatedParamiterList<ParamiterSyntax> parms = null;
             TypeClauseSyntax returnType = null;
             StatementSyntax body;
-            TokenKind procToken;
+            TokenKind procToken, tmpTok;
             bool isSub;
             string functionName;
 
@@ -978,11 +978,13 @@ namespace rpgc.Syntax
                 {
                     intface = match(TokenKind.TK_PROCINFC);
 
+                    // check interface name
                     pocInterfaceName = match(TokenKind.TK_IDENTIFIER);
-                    if (identifier.kind == TokenKind.TK_BADTOKEN)
+                    if (pocInterfaceName.kind == TokenKind.TK_BADTOKEN)
                         return new ErrorMemberSyntax(_sTree);
 
                     functionName = pocInterfaceName.sym.ToString().ToUpper();
+
                     // check if procedure name matches interface name
                     if (functionName != curSubroutineScope && functionName != "*N")
                     {
@@ -990,10 +992,18 @@ namespace rpgc.Syntax
                         return new ErrorMemberSyntax(_sTree);
                     }
 
-                    returnType = parceOptinalTypeClause();
+                    // check for return type
+                    tmpTok = peek(0).kind;
+                    if (tmpTok != TokenKind.TK_SEMI || tmpTok != TokenKind.TK_NEWLINE)
+                    {
+                        returnType = parceOptinalTypeClause();
+                    }
+
+                    // start getting procedure paramiters
                     catchEndOfLine();
                     parms = parseParamiterList();
 
+                    // complete interface block
                     endInterface = match(TokenKind.TK_ENDPI);
                     if (endInterface.kind == TokenKind.TK_BADTOKEN)
                         return new ErrorMemberSyntax(_sTree);
