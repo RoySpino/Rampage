@@ -214,10 +214,11 @@ namespace rpgc
         public void reportBadCharacter(TextLocation txtLoc, char symbol, int position)
         {
             string message;
+            TextSpan span = txtLoc.SPAN;
 
-            message = string.Format("({1}): error: bad character imput ({0})", symbol, "{0},{1}");
+            message = string.Format("({1},{2}): error: bad character imput ({0})", symbol, span.LineNo, span.LinePos);
 
-            report(txtLoc, message, (position - 1), 1);
+            report(txtLoc, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////

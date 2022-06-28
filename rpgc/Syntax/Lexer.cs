@@ -18,7 +18,7 @@ namespace rpgc.Syntax
         int pos, lineNum, sSize, peekPos;
         char curChar;
         DiagnosticBag diagnostics = new DiagnosticBag();
-        bool onEvalLine = true, doAddMainFunciton, doAddMainProcEnd, doAddMainProcSrt;
+        bool onEvalLine = true, doAddMainFunciton, doAddMainProcEnd, doAddMainProcSrt, onStartCSpec, onEndCSpec;
         List<SyntaxToken> strucLexLine = new List<SyntaxToken>();
         int parenCnt = 0, linePos;
         string lineType = "";
@@ -35,6 +35,7 @@ namespace rpgc.Syntax
         private List<SyntaxToken> MainProcedureInterface = new List<SyntaxToken>();
         private Regex declarBlkEnd = new Regex(@"(?i)^end-(pi|pr|ds)", RegexOptions.IgnoreCase);
         private bool onSelectStart;
+        string curSpec, lstSpec;
 
         int start;
         TokenKind kind;
@@ -49,10 +50,12 @@ namespace rpgc.Syntax
             doAddMainFunciton = true;
             doAddMainProcEnd = false;
             doAddMainProcSrt = false;
+            onStartCSpec = false;
             pos = -1;
             linePos = 0;
             lineNum = 1;
             prevLine = -1;
+            lstSpec = "";
             specChkStr = "CTL-OPT";
             onSelectStart = true;
 
@@ -67,7 +70,6 @@ namespace rpgc.Syntax
             Dictionary<string, int> specVal2 = new Dictionary<string, int>() { { "CTL-OPT", 1 }, { "DCL-F", 2 }, { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "¢", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> procSpec = new Dictionary<string, int>() { { "DCL-S", 3 }, { "DCL-C", 3 }, { "DCL-DS", 3 }, { "END-DS", 3 }, { "DCL-PR", 3 }, { "END-PR", 3 }, { "DCL-PI", 3 }, { "END-PI", 3 }, { "¢", 4 }, { "DCL-PROC", 5 }, { "END-PROC", 5 } };
             Dictionary<string, int> mainDic = null;
-            string curSpec;
 
             curSpec = spec;
 
@@ -96,6 +98,17 @@ namespace rpgc.Syntax
                     curSpec = "DCL-S";
             }
 
+            // set C-spec flag (ON START)
+            if (curSpec == "¢" && lstSpec != "¢")
+                onStartCSpec = true;
+            // set C-spec flag (ON END)
+            if (curSpec != "¢" && lstSpec == "¢")
+                onEndCSpec = true;
+
+            // save the last spec
+            if (curSpec != lstSpec)
+                lstSpec = curSpec;
+
             // spec is the same 
             if (curSpec == specChkStr)
                 return true;
@@ -106,6 +119,7 @@ namespace rpgc.Syntax
                 // add hidden procedure declaration line
                 if (doAddMainFunciton == true)
                 {
+                    /*
                     // start of the C specificaton
                     // first line is a main funciton
                     if (mainDic[curSpec] == 4 && mainDic[specChkStr] == 3)
@@ -115,6 +129,7 @@ namespace rpgc.Syntax
                     // compleate the end procedure
                     if (mainDic[curSpec] > 4 && mainDic[specChkStr] == 4)
                         doAddMainProcEnd = true;
+                    */
                 }
 
                 // compute line spec
@@ -341,9 +356,15 @@ namespace rpgc.Syntax
         {
             string symbol = "";
             TextLocation location;
+            TextSpan tmpTS;
 
             kind = TokenKind.TK_BADTOKEN;
             Value = null;
+
+
+
+
+
 
 
 
@@ -475,10 +496,12 @@ namespace rpgc.Syntax
                         }
                         else
                         {
-                            location = new TextLocation(source, new TextSpan(pos, 1, lineNum, linePos));
+                            tmpTS = new TextSpan(pos, 1, lineNum, linePos);
+                            location = new TextLocation(source, tmpTS);
                             diagnostics.reportBadCharacter(location, curChar, 1);
                             Value = "";
                             symbol = curChar.ToString();
+                            nextChar();
                         }
                     }
                     break;
@@ -1005,14 +1028,14 @@ namespace rpgc.Syntax
                 // add hidden main procedure
                 if (doAddMainFunciton == true)
                 {
-                    if (doAddMainProcSrt == true)
+                    if (onStartCSpec == true)
                     {
-                        doAddMainProcSrt = false;
+                        onStartCSpec = false;
                         ret.AddRange(SyntaxFacts.prepareMainFunction(_SyntaxTree, TokenKind.TK_SEMI, true));
                     }
-                    if (doAddMainProcEnd == true || tok.kind == TokenKind.TK_EOI || tok.kind == TokenKind.TK_BEGSR|| tok.kind == TokenKind.TK_PROCDCL)
+                    if (onEndCSpec == true )
                     {
-                        doAddMainProcEnd = false;
+                        // at end stop adding main funciton
                         doAddMainFunciton = false;
                         ret.AddRange(SyntaxFacts.prepareMainFunction(_SyntaxTree, TokenKind.TK_SEMI, false));
                     }
