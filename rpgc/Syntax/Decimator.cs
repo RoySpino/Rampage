@@ -1065,35 +1065,6 @@ namespace rpgc.Syntax
         }
 
         // //////////////////////////////////////////////////////////////////////////////////
-        private static SyntaxToken getComparisonOpCode(StructNode node)
-        {
-            string op;
-
-            op = node.symbol;
-            op = op.Substring(op.Length - 2);
-
-            switch (op)
-            {
-                case "EQ":
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_EQ, node.linePos, (node.chrPos), node.symbol);
-                case "NE":
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_NE, node.linePos, (node.chrPos), node.symbol);
-
-                case "LT":
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_LT, node.linePos, (node.chrPos), node.symbol);
-                case "GT":
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_GT, node.linePos, (node.chrPos), node.symbol);
-
-                case "GE":
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_GE, node.linePos, (node.chrPos), node.symbol);
-                case "LE":
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_LE, node.linePos, (node.chrPos), node.symbol);
-                default:
-                    return new SyntaxToken(sTree_ ,TokenKind.TK_BADTOKEN, node.linePos, (node.chrPos), "");
-            }
-        }
-
-        // //////////////////////////////////////////////////////////////////////////////////
         private static StructNode leftJustified(List<StructNode> lst)
         {
             for (int i = 3; i < 7; i++)
@@ -1604,7 +1575,7 @@ namespace rpgc.Syntax
                     case "SUB":
                     case "MULT":
                     case "DIV":
-                        if (FAC1.symbol == "")
+                        if (FAC1.isBlank() == true)
                         {
                             // +=,-=,*=,/= factor 2 to factor 3
                             ret.AddRange(doLex(RESULT));
@@ -1686,7 +1657,7 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, OP.chrPos, "", OP.chrPos));
                         break;
                     case "LEAVE":
-                        if (FAC2.symbol == "" && FAC1.symbol == "")
+                        if (FAC2.isBlank() == true && FAC1.isBlank() == true)
                         {
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_LEAVE, OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, OP.chrPos, "", OP.chrPos));
@@ -1709,14 +1680,14 @@ namespace rpgc.Syntax
                         lineType = "DOU";
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOU, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
                         break;
                     case "DOU":
                         onBooleanLine = true;
-                        if (FAC1.symbol != "")
+                        if (FAC1.isBlank() == false)
                         {
                             // somthing was entered in factor 1
                             ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", OP.chrPos));
@@ -1740,7 +1711,7 @@ namespace rpgc.Syntax
                     case "DOWNE":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_DOW, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "DO", OP.chrPos));
@@ -1748,7 +1719,7 @@ namespace rpgc.Syntax
                         break;
                     case "DOW":
                         onBooleanLine = true;
-                        if (FAC1.symbol != "")
+                        if (FAC1.isBlank() == false)
                         {
                             // somthing was entered in factor 1
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", FAC1.chrPos));
@@ -1766,7 +1737,7 @@ namespace rpgc.Syntax
                         break;
                     case "IF":
                         onBooleanLine = true;
-                        if (FAC1.symbol != "")
+                        if (FAC1.isBlank() == false)
                         {
                             // somthing was entered in factor
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", FAC1.chrPos));
@@ -1791,7 +1762,7 @@ namespace rpgc.Syntax
                         lineType = "IF";
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IF, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), "IF", OP.chrPos));
@@ -1839,6 +1810,11 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         lineType = "";
                         break;
+                    case "ENDCS":
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ENDCS, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        lineType = "";
+                        break;
                     case "EXSR":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_EXSR, OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_IDENTIFIER, FAC2.linePos, FAC2.chrPos, FAC2.symbol, FAC2.chrPos));
@@ -1879,6 +1855,63 @@ namespace rpgc.Syntax
                         ret.AddRange(inject(")"));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
+                    case "CAB":
+                    case "CABEQ":
+                    case "CABNE":
+                    case "CABLT":
+                    case "CABGT":
+                    case "CABLE":
+                    case "CABGE":
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_CAB, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.AddRange(doLex(FAC1));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                        ret.AddRange(doLex(FAC2));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_GOTO, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.AddRange(doLex(RESULT));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+
+                        if (OpCode == "CAB")
+                            if (HI.isBlank() && LO.isBlank() && EQ.isBlank())
+                            {
+                                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                                location = new TextLocation(source, new TextSpan(OP.chrPos, OP.symbol.Length));
+                                diagnostics.reportCASIndicatorError(sTree_, location);
+                            }
+                        break;
+                    case "CAS":
+                    case "CASEQ":
+                    case "CASNE":
+                    case "CASLT":
+                    case "CASGT":
+                    case "CASLE":
+                    case "CASGE":
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_CAS, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        if (OpCode == "CAS")
+                        {
+                            ret.AddRange(inject("*ON"));
+                        }
+                        else
+                        {
+                            ret.AddRange(doLex(FAC1));
+                            ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                            ret.AddRange(doLex(FAC2));
+                        }
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_EXSR, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.AddRange(doLex(RESULT));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                        break;
                     case "ORGE":
                     case "ORGT":
                     case "ORLE":
@@ -1887,7 +1920,7 @@ namespace rpgc.Syntax
                     case "ORNE":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_OR, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.Add(getComparisonOpCode(OP));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         break;
                     case "ANDGE":
@@ -1898,14 +1931,14 @@ namespace rpgc.Syntax
                     case "ANDNE":
                         ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_AND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC1));
-                        ret.Add(getComparisonOpCode(OP));
+                        ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         break;
                     case "EVAL":
                     case "EVALR":
                         onEvalLine = true;
                         lineType = "";
-                        if (FAC1.symbol != "")
+                        if (FAC1.isBlank() == false)
                         {
                             // somthing was entered in factor 1
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", FAC1.chrPos));
@@ -1921,7 +1954,7 @@ namespace rpgc.Syntax
                     case "FOR":
                         onEvalLine = true;
                         lineType = "";
-                        if (FAC1.symbol != "")
+                        if (FAC1.isBlank() == false)
                         {
                             // somthing was entered in factor
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_SPACE, FAC1.linePos, (FAC1.chrPos), "", FAC1.chrPos));
@@ -1937,7 +1970,7 @@ namespace rpgc.Syntax
                         }
                         break;
                     case "LEAVESR":
-                        if (FAC2.symbol == "" && FAC1.symbol == "")
+                        if (FAC2.isBlank() == true && FAC1.isBlank() == true)
                         {
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_RETURN, FAC2.linePos, (FAC2.chrPos), "RETURN", FAC2.chrPos));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
@@ -2156,6 +2189,11 @@ namespace rpgc.Syntax
             endIdx = symbol.Length - 1;
 
             return (symbol[endIdx] == 32);
+        }
+
+        public bool isBlank()
+        {
+            return String.IsNullOrEmpty(symbol);
         }
     }
 

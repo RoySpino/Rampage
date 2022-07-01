@@ -74,6 +74,7 @@
     <Compile Include="Binding\BoundBinOperator.cs" />
     <Compile Include="Binding\BoundBlockStatement.cs" />
     <Compile Include="Binding\BoundCallExpression.cs" />
+    <Compile Include="Binding\BoundCASStatement.cs" />
     <Compile Include="Binding\BoundConversionExpression.cs" />
     <Compile Include="Binding\BoundErrorExpression.cs" />
     <Compile Include="Binding\BoundErrorStatement.cs" />
@@ -128,6 +129,7 @@
     <Compile Include="Syntax\BlockStatementSyntax.cs" />
     <Compile Include="Syntax\BreakStamentSyntax.cs" />
     <Compile Include="Syntax\CallExpressionSyntax.cs" />
+    <Compile Include="Syntax\CaseStatementSyntax.cs" />
     <Compile Include="Syntax\CompilationUnit.cs" />
     <Compile Include="Syntax\ContinueStamentSyntax.cs" />
     <Compile Include="Syntax\Decimator.cs" />

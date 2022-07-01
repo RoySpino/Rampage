@@ -680,6 +680,17 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportMissingEndCS(SyntaxTree sTree, TextLocation txtLoc)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({0},{1}): error: CAS without ENDCS statement", span.LineNo, span.LinePos);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         internal void reportTypeNotGiven(TextLocation txtLoc)
         {
             string message;
@@ -816,6 +827,17 @@ namespace rpgc
             message = string.Format("({0},{1}): error: Program has more than one entry point defined", span.LineNo, span.LinePos);
 
             report(textLocation, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
+        internal void reportCASIndicatorError(SyntaxTree sTree_, TextLocation location)
+        {
+            string message;
+            TextSpan span = location.SPAN;
+
+            message = string.Format("({0},{1}): error: CAS without XX must have at least one indicator output in Hi/Lo/Eq", span.LineNo, span.LinePos);
+
+            report(location, message);
         }
 
         // //////////////////////////////////////////////////////////////////////////

@@ -31,6 +31,8 @@ namespace rpgc.Binding
                     return rewriteBoundDoUntilStatement((BoundUntilStatement)node);
                 case BoundNodeToken.BNT_SELECTSTMT:
                     return rewriteBoundSelectStatement((BoundSelectWhenStatement)node);
+                case BoundNodeToken.BNT_CAS:
+                    return rewriteBoundCASStatement((BoundCASStatement)node);
                 case BoundNodeToken.BNT_LABEL:
                     return rewriteBoundLabelStatement((BoundLabelStatement)node);
                 case BoundNodeToken.BNT_GOTO:
@@ -360,10 +362,34 @@ namespace rpgc.Binding
             // rewrite the OTHER (default) block
             if (tmpStatemnt != null)
                 defaultBlock = rewriteStatement(node.DefualtStatements);
-                //defaultBlock = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(rewriteStatement(tmpStatemnt)));
 
             // create new flaten SELECT statement
             return new BoundSelectWhenStatement(newConditionList.ToImmutableArray(), newWhenBodiesLst.ToImmutableArray(), defaultBlock);
+        }
+
+        // /////////////////////////////////////////////////////////////////////////////
+        protected virtual BoundStatement rewriteBoundCASStatement(BoundCASStatement node)
+        {
+            ImmutableArray<BoundExpression> conditionList = node.BoundExpressions;
+            ImmutableArray<BoundStatement> whenBodiesLst = node.BoundStatements;
+            ImmutableArray<BoundExpression>.Builder newConditionList;
+            ImmutableArray<BoundStatement>.Builder newWhenBodiesLst;
+            BoundStatement defaultBlock;
+            BoundStatement tmpStatemnt;
+
+            newConditionList = ImmutableArray.CreateBuilder<BoundExpression>();
+            newWhenBodiesLst = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            // create new flatten condition expressions
+            foreach (BoundExpression condition in conditionList)
+                newConditionList.Add(rewriteExpression(condition));
+
+            // create new flatten subrutine call
+            foreach (BoundStatement body in whenBodiesLst)
+                newWhenBodiesLst.Add(rewriteStatement(body));
+
+            // create new flaten SELECT statement
+            return new BoundCASStatement(newConditionList.ToImmutableArray(), newWhenBodiesLst.ToImmutableArray());
         }
 
         // /////////////////////////////////////////////////////////////////////////////

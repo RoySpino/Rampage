@@ -379,7 +379,7 @@ namespace rpgc.Lowering
             gotoEND = new BoundGoToStatement(endLable);
 
             // rebind the statments and conditions
-            for (int i=0; i<lim; i++)
+            for (int i = 0; i < lim; i++)
             {
                 tmpLbl = generateLable();
                 tmpLableStatement = new BoundLabelStatement(tmpLbl);
@@ -428,6 +428,88 @@ namespace rpgc.Lowering
             ret.AddRange(conditionTable);
             ret.AddRange(blockTable);
 
+            result = new BoundBlockStatement(ret.ToImmutable());
+
+            return result;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////
+        protected override BoundStatement rewriteBoundCASStatement(BoundCASStatement node)
+        {
+            /* 
+             * 
+             *     <A>     CASxx     <B>           <subrutine>
+             *     <A>     CASxx     <B>           <subrutine>
+             *             CAS                     <subrutine>
+             *             ENDCS
+             * 
+             * 
+             * 
+             * gotoWhenFalse <condition> LBL_cond_1
+             * gotoWhenFalse <condition> LBL_cond_2
+             * goto LBL_cond_other
+             * LBL_cond_1:
+             *     <block statement 1>
+             *     goto LBL_end
+             * LBL_cond_2:
+             *     <block statement 2>
+             *     goto LBL_end
+             * LBL_cond_other
+             *     <block statement 1>
+             *     goto LBL_end
+             * end_Lable:
+             * 
+            */
+            ImmutableArray<BoundStatement>.Builder conditionTable;
+            ImmutableArray<BoundStatement>.Builder blockTable;
+            ImmutableArray<BoundStatement>.Builder ret;
+            BoundLabel endLable, tmpLbl;
+            BoundGoToStatement gotoEND;
+            BoundBlockStatement result;
+            BoundLabelStatement endLableStatement, tmpLableStatement;
+            BoundGoToConditionalStatement gotoWhenFalse;
+            int lim;
+
+
+            lim = node.BoundExpressions.Length;
+            conditionTable = ImmutableArray.CreateBuilder<BoundStatement>();
+            blockTable = ImmutableArray.CreateBuilder<BoundStatement>();
+            ret = ImmutableArray.CreateBuilder<BoundStatement>();
+
+
+            endLable = generateLable();
+            endLableStatement = new BoundLabelStatement(endLable);
+            gotoEND = new BoundGoToStatement(endLable);
+
+            // rebind the statments and conditions
+            for (int i = 0; i < lim; i++)
+            {
+                tmpLbl = generateLable();
+                tmpLableStatement = new BoundLabelStatement(tmpLbl);
+                gotoWhenFalse = new BoundGoToConditionalStatement(tmpLbl, node.BoundExpressions[i], false);
+
+                // build CONDITION table
+                conditionTable.Add(gotoWhenFalse);
+
+                // rebuild CAS blocks
+                blockTable.Add(new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
+                    tmpLableStatement,
+                    rewriteStatement(node.BoundStatements[i]),
+                    gotoEND
+                    )));
+            }
+
+            // add a GOTO to skip all CAS blocks
+            conditionTable.Add(gotoEND);
+
+            // add end lable to block list
+            blockTable.Add(endLableStatement);
+
+            // combine statements into one list
+            ret.AddRange(conditionTable);
+            ret.AddRange(blockTable);
+
+            // setup results to return
             result = new BoundBlockStatement(ret.ToImmutable());
 
             return result;

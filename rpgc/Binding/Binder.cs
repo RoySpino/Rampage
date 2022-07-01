@@ -399,6 +399,8 @@ namespace rpgc.Binding
                     return BindReturnStatement((ReturnStatementSyntax)syntax);
                 case TokenKind.TK_SELECT:
                     return BindSelectStatement((SelectStatementSyntax)syntax);
+                case TokenKind.TK_CAS:
+                    return BindCASStatement((CaseStatementSyntax)syntax);
                 case TokenKind.TK_BADTOKEN:
                     return new BoundErrorStatement();
                 default:
@@ -874,6 +876,32 @@ namespace rpgc.Binding
         }
 
         // ///////////////////////////////////////////////////////////////////////////////
+        private BoundStatement BindCASStatement(CaseStatementSyntax syntax)
+        {
+            BoundExpression condition;
+            BoundStatement subs;
+            ImmutableArray<BoundStatement>.Builder blocks;
+            ImmutableArray<BoundExpression>.Builder conditions;
+            ImmutableArray<BoundStatement>.Builder tmp;
+            int lim;
+
+            blocks = ImmutableArray.CreateBuilder<BoundStatement>();
+            conditions = ImmutableArray.CreateBuilder<BoundExpression>();
+            lim = syntax.Conditions.Count();
+
+            for(int i=0; i<lim; i++)
+            {
+                condition = BindExpression(syntax.Conditions[i]);
+                subs = BindStatements(syntax.Statements[i]);
+
+                blocks.Add(subs);
+                conditions.Add(condition);
+            }
+
+            return new BoundCASStatement(conditions.ToImmutable(), blocks.ToImmutable());
+        }
+
+        // ///////////////////////////////////////////////////////////////////////////////
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
         {
             BoundExpression condition;
@@ -1246,7 +1274,8 @@ namespace rpgc.Binding
         BNT_CONVEXP,
         BNT_RETSTMT,
         BNT_NOOP,
-        BNT_SELECTSTMT
+        BNT_SELECTSTMT,
+        BNT_CAS
     }
 
     public enum BoundUniOpToken

@@ -23,7 +23,7 @@ namespace rpgc.Syntax
                                 "READC","READE","READP","READPE","REALLOC","REL","RESET","RETURN","ROLBK","SCAN","SELECT","SEMI",
                                 "SETGT","SETLL","SETOFF","SETON","SHTDN","SORTA","SPACE","SQRT","SUB","SUBDUR","SUBST","TAG","TEST",
                                 "TESTB","TESTN","TESTZ","TIME","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE","XFOOT","XLATE",
-                                "Z-ADD","Z-SUB"};
+                                "Z-ADD","Z-SUB", "CASEQ", "CASNE", "CASLE", "CASLT", "CASGE", "CASGT"};
         private static string[] freeKeyWords = {"ACQ","ALLOC","AND","ASSIGN","BEGSR","BY",
                                 "CIN","CHAIN","CLEAR","INZ","SUBST","TEST",
                                 "CLOSE","COMMIT", "COUT","DEALLOC","DEFINE","DELETE",
@@ -46,6 +46,14 @@ namespace rpgc.Syntax
                                                 ,"KL","KM","KN","KO","KP","KQ","KR","KS","KT","KU","KV","KW","KX","L0","L1","L2","L3","L4","L5","L6","L7","L8","L9","M1","M2","M3","M4","M5","M6","M7"
                                                 ,"M8","M9","MR","OA","OG","OV","RT"};
         private static string[] allFreeKeywords = null;
+        private static Dictionary<string, TokenKind> opDic = new Dictionary<string, TokenKind>() { 
+            {"EQ", TokenKind.TK_EQ}, 
+            {"NE", TokenKind.TK_NE }, 
+            {"LE", TokenKind.TK_LE},
+            {"GE", TokenKind.TK_GE },
+            {"LT", TokenKind.TK_LT },
+            {"GT", TokenKind.TK_GT }
+        };
 
         public static bool isCharLiteralOrControl(char chr)
         {
@@ -247,6 +255,43 @@ namespace rpgc.Syntax
                 default:
                     return TokenKind.TK_IDENTIFIER;
             }
+        }
+        // //////////////////////////////////////////////////////////////////////////////////
+        public static TokenKind LegacyComparison(string symbol)
+        {
+            string operation;
+
+            // dont do there is nothing in the string
+            if (string.IsNullOrEmpty(symbol) == true)
+                return TokenKind.TK_SPACE;
+            if (symbol.Length < 2)
+                return TokenKind.TK_SPACE;
+
+            // get the operation code
+            operation = symbol.Substring(symbol.Length - 2);
+
+            // get token
+            switch (operation)
+            {
+                case "EQ":
+                    return TokenKind.TK_EQ;
+                case "NE":
+                    return TokenKind.TK_NE;
+
+                case "LT":
+                    return TokenKind.TK_LT;
+                case "GT":
+                    return TokenKind.TK_GT;
+
+                case "GE":
+                    return TokenKind.TK_GE;
+                case "LE":
+                    return TokenKind.TK_LE;
+                default:
+                    return TokenKind.TK_BADTOKEN;
+            }
+
+            return TokenKind.TK_SPACE;
         }
 
         // //////////////////////////////////////////////////////////////////////////////////
