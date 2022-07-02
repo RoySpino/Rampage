@@ -1131,6 +1131,45 @@ namespace rpgc.Syntax
         }
 
         // ////////////////////////////////////////////////////////////////////////////
+        private static List<SyntaxToken> injectHILOEQ(StructNode OP, StructNode Lo, StructNode Hi, StructNode Eq)
+        {
+            List<SyntaxToken> ret;
+            StructNode[] lst  = { Hi, Lo, Eq};
+            TokenKind[] tk = { TokenKind.TK_LT, TokenKind.TK_GT, TokenKind.TK_EQ };
+            string sym;
+            int idx;
+
+            // setup
+            ret = new List<SyntaxToken>();
+            idx = -1;
+            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_SPACE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+
+            // add indicators
+            foreach(StructNode tmp in lst)
+            {
+                // setup current iteration values
+                idx += 1;
+                sym = tmp.symbol;
+
+                // check for blank symbols
+                if (string.IsNullOrEmpty(sym) == true)
+                    continue;
+
+                // apply comparison operation
+                ret.AddRange(inject($"IN{sym}"));
+                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_ASSIGN, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                ret.Add(new SyntaxToken(sTree_,
+                    tk[idx],
+                    OP.linePos,
+                    (OP.chrPos),
+                    "", OP.chrPos));
+            }
+
+            // return the list
+            return ret;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////
         private static List<SyntaxToken> injectMainEnd()
         {
             List<SyntaxToken> ret = new List<SyntaxToken>();
@@ -1856,6 +1895,17 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         break;
                     case "CAB":
+                        if (HI.isBlank() && LO.isBlank() && EQ.isBlank())
+                        {
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, OP.linePos, (OP.chrPos), "", OP.chrPos));
+                            location = new TextLocation(source, new TextSpan(OP.chrPos, OP.symbol.Length));
+                            diagnostics.reportCASIndicatorError(sTree_, location);
+                        }
+                        else
+                        {
+                            ret.AddRange(injectHILOEQ(OP, LO, HI, EQ));
+                        }
+                        break;
                     case "CABEQ":
                     case "CABNE":
                     case "CABLT":
@@ -1876,13 +1926,8 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
 
-                        if (OpCode == "CAB")
-                            if (HI.isBlank() && LO.isBlank() && EQ.isBlank())
-                            {
-                                ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, OP.linePos, (OP.chrPos), "", OP.chrPos));
-                                location = new TextLocation(source, new TextSpan(OP.chrPos, OP.symbol.Length));
-                                diagnostics.reportCASIndicatorError(sTree_, location);
-                            }
+                        // aply indicators flags if any
+                        ret.AddRange(injectHILOEQ(OP, LO, HI, EQ));
                         break;
                     case "CAS":
                     case "CASEQ":
@@ -1911,6 +1956,9 @@ namespace rpgc.Syntax
 
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+
+                        // aply indicators flags if any
+                        ret.AddRange(injectHILOEQ(OP, LO, HI, EQ));
                         break;
                     case "ORGE":
                     case "ORGT":
