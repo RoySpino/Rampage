@@ -128,6 +128,7 @@
     <Compile Include="Syntax\BinaryExpressionSyntax.cs" />
     <Compile Include="Syntax\BlockStatementSyntax.cs" />
     <Compile Include="Syntax\BreakStamentSyntax.cs" />
+    <Compile Include="Syntax\CabStatementSyntax.cs" />
     <Compile Include="Syntax\CallExpressionSyntax.cs" />
     <Compile Include="Syntax\CaseStatementSyntax.cs" />
     <Compile Include="Syntax\CompilationUnit.cs" />

@@ -23,7 +23,6 @@ namespace rpgc.Syntax
         SourceText text;
         TextLocation location;
         Dictionary<string, string> functionReturns = new Dictionary<string, string>();
-        bool onCas;
 
         public Parser(SyntaxTree syntaxTree)
         {
@@ -737,7 +736,6 @@ namespace rpgc.Syntax
 
             // basic setup
             keyword = null;
-            onCas = true;
 
             // this has atleast ONE good cycle befor an error occurs
             while (current.kind != TokenKind.TK_ENDCS &&
@@ -770,10 +768,45 @@ namespace rpgc.Syntax
             match(TokenKind.TK_ENDCS);
             catchEndOfLine();
 
-            // remove cas flag
-            onCas = false;
-
             return new CaseStatementSyntax(_sTree, keyword, conditions, statements);
+        }
+
+        // /////////////////////////////////////////////////////////////////////////
+        private CabStatementSyntax parseCabStaement()
+        {
+            SyntaxToken keyword;
+            List<ExpresionSyntax> conditions = new List<ExpresionSyntax>();
+            List<StatementSyntax> statements = new List<StatementSyntax>();
+
+            // basic setup
+            keyword = null;
+
+            // this has atleast ONE good cycle befor an error occurs
+            while (current.kind != TokenKind.TK_EOI)
+            {
+                // current token at this point must be a CAS 
+                // otherwis it is an error exit loop
+                if (current.kind != TokenKind.TK_CAB)
+                {
+                    diagnostics.reportMissingEndCS(_sTree, keyword.Location());
+                    break;
+                }
+
+                // collect CAS token
+                keyword = match(TokenKind.TK_CAB);
+
+                // get the condition
+                conditions.Add(parceExpression());
+                catchEndOfLine();
+
+                // get GOTO and indicator statments
+                statements.Add(parseStaement(TokenKind.TK_ENDCS));
+
+                if (current.kind == TokenKind.TK_NEWLINE)
+                    catchEndOfLine();
+            }
+
+            return new CabStatementSyntax(_sTree, keyword, conditions, statements);
         }
 
         // /////////////////////////////////////////////////////////////////////////
