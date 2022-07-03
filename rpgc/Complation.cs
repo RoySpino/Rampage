@@ -89,8 +89,8 @@ namespace rpgc
         {
             bool isMain, isScript;
 
-            isMain = _globalScope.MainFunction != null;
-            isScript = _globalScope.ScriptFunciton != null;
+            isMain = globalScope_.MainFunction != null;
+            isScript = globalScope_.ScriptFunciton != null;
 
             if (isMain == true && isScript == false)
                 emitTree(_globalScope.MainFunction, writer);

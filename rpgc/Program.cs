@@ -30,7 +30,7 @@ namespace rpgc
                 */
                 //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\test4.rpg" };
                 //string[] ar = { @"D:\Documents\CodeSnipets\RPG\RampageTest\RPMult2.rpg" };
-                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\cas.rpg" };
+                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\cab.rpg" };
                 doCompile(ar);
             }
             else
@@ -124,6 +124,14 @@ namespace rpgc
             // display diagnostics if any
             if (res._Diagnostics.Any() == true)
                 TextWriterExtensions.WriteDiagnostics(Console.Error, res._Diagnostics);
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        // handle compiler directives (program output etc.)
+        public static void CompilerActions(Complation _compilation)
+        {
+            _compilation.emitTree(Console.Out);
+            Console.ResetColor();
         }
     }
 }

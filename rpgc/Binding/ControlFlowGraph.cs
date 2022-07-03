@@ -230,7 +230,8 @@ namespace rpgc.Binding
         public sealed class GraphBuilder
         {
             private Dictionary<BoundStatement, BasicBlock> _blockFromStatement = new Dictionary<BoundStatement, BasicBlock>();
-            private Dictionary<BoundLabel, BasicBlock> _blockFromLabel = new Dictionary<BoundLabel, BasicBlock>();
+            //private Dictionary<BoundLabel, BasicBlock> _blockFromLabel = new Dictionary<BoundLabel, BasicBlock>();
+            private Dictionary<string, BasicBlock> _blockFromLabel = new Dictionary<string, BasicBlock>();
             private List<BasicBlockBranch> _branches = new List<BasicBlockBranch>();
             private BasicBlock _start = new BasicBlock(isStart: true);
             private BasicBlock _end = new BasicBlock(isStart: false);
@@ -243,6 +244,7 @@ namespace rpgc.Binding
                 BoundExpression negatedCondition, thenCondition, elseCondition;
                 BoundLabelStatement labelStatement;
                 BoundLabel tmpLabel;
+                string lblName;
                 bool isLastStatementInBlock;
 
                 if (!blocks.Any())
@@ -265,8 +267,8 @@ namespace rpgc.Binding
                             tmpLabel = labelStatement.Label;
 
                             // add only unique labels
-                            if (_blockFromLabel.ContainsKey(tmpLabel) == false)
-                                _blockFromLabel.Add(tmpLabel, block);
+                            if (_blockFromLabel.ContainsKey(tmpLabel.Name) == false)
+                                _blockFromLabel.Add(tmpLabel.Name, block);
                         }
                     }
                 }
@@ -288,12 +290,14 @@ namespace rpgc.Binding
                                 return new ControlFlowGraph(_start, _end, blocks, _branches);
                             case BoundNodeToken.BNT_GOTO:
                                 gs = (BoundGoToStatement)statement;
-                                toBlock = _blockFromLabel[gs.Label];
+                                lblName = gs.Label.Name;
+                                toBlock = _blockFromLabel[lblName];
                                 Connect(current, toBlock);
                                 break;
                             case BoundNodeToken.BNT_GOTOCOND:
                                 cgs = (BoundGoToConditionalStatement)statement;
-                                thenBlock = _blockFromLabel[cgs.Label];
+                                lblName = cgs.Label.Name;
+                                thenBlock = _blockFromLabel[lblName];
                                 elseBlock = next;
                                 negatedCondition = Negate(cgs.Condition);
                                 thenCondition = cgs.JumpIfFalse == false ? cgs.Condition : negatedCondition;

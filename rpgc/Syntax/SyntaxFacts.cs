@@ -23,7 +23,8 @@ namespace rpgc.Syntax
                                 "READC","READE","READP","READPE","REALLOC","REL","RESET","RETURN","ROLBK","SCAN","SELECT","SEMI",
                                 "SETGT","SETLL","SETOFF","SETON","SHTDN","SORTA","SPACE","SQRT","SUB","SUBDUR","SUBST","TAG","TEST",
                                 "TESTB","TESTN","TESTZ","TIME","UNIEXP","UNIOP","UNLOCK","UPDATE","WHEN","WRITE","XFOOT","XLATE",
-                                "Z-ADD","Z-SUB", "CASEQ", "CASNE", "CASLE", "CASLT", "CASGE", "CASGT"};
+                                "Z-ADD","Z-SUB", "CASEQ", "CASNE", "CASLE", "CASLT", "CASGE", "CASGT", "CABEQ", "CABNE", "CABLE", 
+                                "CABLT", "CABGE", "CABGT"};
         private static string[] freeKeyWords = {"ACQ","ALLOC","AND","ASSIGN","BEGSR","BY",
                                 "CIN","CHAIN","CLEAR","INZ","SUBST","TEST",
                                 "CLOSE","COMMIT", "COUT","DEALLOC","DEFINE","DELETE",

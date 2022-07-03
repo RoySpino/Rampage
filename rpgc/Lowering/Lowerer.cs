@@ -514,5 +514,75 @@ namespace rpgc.Lowering
 
             return result;
         }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////
+        protected override BoundStatement rewriteBoundCABStatement(BoundCABStatement node)
+        {
+            /* 
+             * 
+             *     <A>     CASxx     <B>           <Tag_A>
+             *     <A>     CASxx     <B>           <Tag_B>
+             * 
+             * 
+             * 
+             * gotoWhenFalse <condition> LBL_cond_1
+             * gotoWhenFalse <condition> LBL_cond_2
+             * goto end
+             * LBL_cond_1:
+             *     goto Tag_A
+             * LBL_cond_2:
+             *     goto Tag_B
+             * 
+             * 
+            */
+            ImmutableArray<BoundStatement>.Builder conditionTable;
+            ImmutableArray<BoundStatement>.Builder blockTable;
+            ImmutableArray<BoundStatement>.Builder ret;
+            BoundLabel endLable, tmpLbl;
+            BoundBlockStatement result;
+            BoundLabelStatement endLableStatement, tmpLableStatement;
+            BoundGoToConditionalStatement gotoWhenFalse;
+            BoundGoToStatement gotoEND;
+            int lim;
+
+
+            lim = node.BoundExpressions.Length;
+            conditionTable = ImmutableArray.CreateBuilder<BoundStatement>();
+            blockTable = ImmutableArray.CreateBuilder<BoundStatement>();
+            ret = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            endLable = generateLable();
+            endLableStatement = new BoundLabelStatement(endLable);
+            gotoEND = new BoundGoToStatement(endLable);
+
+            // rebind the statments and conditions
+            for (int i = 0; i < lim; i++)
+            {
+                tmpLbl = generateLable();
+                tmpLableStatement = new BoundLabelStatement(tmpLbl);
+                gotoWhenFalse = new BoundGoToConditionalStatement(tmpLbl, node.BoundExpressions[i], false);
+
+                // build CONDITION table
+                conditionTable.Add(gotoWhenFalse);
+
+                // rebuild CAS blocks
+                blockTable.Add(new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(
+                    tmpLableStatement,
+                    rewriteStatement(node.BoundStatements[i])
+                    )));
+            }
+
+            conditionTable.Add(gotoEND);
+            blockTable.Add(endLableStatement);
+
+            // combine statements into one list
+            ret.AddRange(conditionTable);
+            ret.AddRange(blockTable);
+
+            // prep the new lowered statments to return
+            result = new BoundBlockStatement(ret.ToImmutable());
+
+            return result;
+        }
     }
 }

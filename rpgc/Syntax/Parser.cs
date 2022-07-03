@@ -120,6 +120,8 @@ namespace rpgc.Syntax
                     return parseSelectStatement();
                 case TokenKind.TK_CAS:
                     return parseCasStaement();
+                case TokenKind.TK_CAB:
+                    return parseCabStaement();
                 case TokenKind.TK_BADTOKEN:
                     return new ErrorStatementSyntax(_sTree);
                 default:
@@ -777,21 +779,15 @@ namespace rpgc.Syntax
             SyntaxToken keyword;
             List<ExpresionSyntax> conditions = new List<ExpresionSyntax>();
             List<StatementSyntax> statements = new List<StatementSyntax>();
+            StatementSyntax gotoStm;
 
             // basic setup
             keyword = null;
 
-            // this has atleast ONE good cycle befor an error occurs
-            while (current.kind != TokenKind.TK_EOI)
+            // loop only if the current token is a CAB
+            while (current.kind != TokenKind.TK_EOI &&
+                current.kind == TokenKind.TK_CAB)
             {
-                // current token at this point must be a CAS 
-                // otherwis it is an error exit loop
-                if (current.kind != TokenKind.TK_CAB)
-                {
-                    diagnostics.reportMissingEndCS(_sTree, keyword.Location());
-                    break;
-                }
-
                 // collect CAS token
                 keyword = match(TokenKind.TK_CAB);
 
@@ -800,7 +796,8 @@ namespace rpgc.Syntax
                 catchEndOfLine();
 
                 // get GOTO and indicator statments
-                statements.Add(parseStaement(TokenKind.TK_ENDCS));
+                gotoStm = parseStaement();
+                statements.Add(gotoStm);
 
                 if (current.kind == TokenKind.TK_NEWLINE)
                     catchEndOfLine();

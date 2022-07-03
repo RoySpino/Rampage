@@ -1917,14 +1917,12 @@ namespace rpgc.Syntax
                         ret.Add(new SyntaxToken(sTree_, SyntaxFacts.LegacyComparison(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                         ret.AddRange(doLex(FAC2));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
+
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKSTART, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
-                        
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_GOTO, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
                         ret.AddRange(doLex(RESULT));
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
-
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, OP.linePos, (OP.chrPos), OpCode, OP.chrPos));
-                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
 
                         // aply indicators flags if any
                         ret.AddRange(injectHILOEQ(OP, LO, HI, EQ));

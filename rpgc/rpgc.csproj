@@ -73,6 +73,7 @@
     <Compile Include="Binding\BoundBinExpression.cs" />
     <Compile Include="Binding\BoundBinOperator.cs" />
     <Compile Include="Binding\BoundBlockStatement.cs" />
+    <Compile Include="Binding\BoundCABStatement.cs" />
     <Compile Include="Binding\BoundCallExpression.cs" />
     <Compile Include="Binding\BoundCASStatement.cs" />
     <Compile Include="Binding\BoundConversionExpression.cs" />
