@@ -594,7 +594,7 @@ namespace rpgc.Syntax
                         nextChar();
                         break;
                     case '%':
-                        symbol = readBuiltInFunctions();//readBuiltInFunctions(line, ref i);
+                        symbol = readBuiltInFunctions();
                         break;
                     case '\'':
                         readString();
@@ -1194,6 +1194,7 @@ namespace rpgc.Syntax
             List<SyntaxToken> ret;
             StructCard card;
             Regex regBegSr = new Regex(@"(?i)^([c])(.{19})(begsr)");
+            Regex splElse = new Regex(@"(?i)^ELSE\s*;");
 
             sTree_ = st;
             ret = new List<SyntaxToken>();
@@ -1293,7 +1294,15 @@ namespace rpgc.Syntax
                 if (doFreeBlock == true)
                 {
                     tmp = tmp.Trim();
-                    ret.AddRange(doLex(new StructNode(lineNo, 0, tmp), doFreeBlock));
+
+                    // add block start for ELSE
+                    if ((splElse.Match(tmp)).Success == true)
+                    {
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BLOCKEND, 0, 0, "", 0));
+                        ret.AddRange(doLex(new StructNode(lineNo, 0, tmp), doFreeBlock));
+                    }
+                    else
+                        ret.AddRange(doLex(new StructNode(lineNo, 0, tmp), doFreeBlock));
                     continue;
                 }
 
@@ -2167,7 +2176,8 @@ namespace rpgc.Syntax
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_PROCINFC, (lst[0].linePos), 1, "Pi", lst[3].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), "*n", lst[1].chrPos));
                     if (lst.Count > 4)
-                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
+                        if (lst[6].isBlank() == false)
+                            ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
                     ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
                     DBlockType = "pi";
                     break;

@@ -154,30 +154,6 @@ namespace rpgc.Syntax
                     return TokenKind.TK_VARDECLR;
                 case "DOU":
                     return TokenKind.TK_DOU;
-                case "DOUQ":
-                    return TokenKind.TK_EQ;
-                case "DOUGE":
-                    return TokenKind.TK_GE;
-                case "DOUGT":
-                    return TokenKind.TK_GT;
-                case "DOULE":
-                    return TokenKind.TK_LE;
-                case "DOULT":
-                    return TokenKind.TK_LT;
-                case "DOUNE":
-                    return TokenKind.TK_NE;
-                case "DOWEQ":
-                    return TokenKind.TK_EQ;
-                case "DOWGE":
-                    return TokenKind.TK_GE;
-                case "DOWGT":
-                    return TokenKind.TK_GT;
-                case "DOWLE":
-                    return TokenKind.TK_LE;
-                case "DOWLT":
-                    return TokenKind.TK_LT;
-                case "DOWNE":
-                    return TokenKind.TK_NE;
                 case "DOW":
                     return TokenKind.TK_DOW;
                 case "DOWNTO":
@@ -470,20 +446,28 @@ namespace rpgc.Syntax
         {
             string kwl;
 
+            // find only free format C specs (for fix format syntax)
+            // otherwise find all free format specs (for full free)
             if (isKeyword(kw) == true && onFree == false)
                 return getKeywordKind(kw);
             else
             {
+                // all free keywords have not been initalized yet
+                // create a new list by adding D format keywords
+                // and C format keywords
                 if (allFreeKeywords == null)
                 {
                     allFreeKeywords = new string[freeKeyWords.Length];
                     freeKeyWords.CopyTo(allFreeKeywords, 0);
                     allFreeKeywords = allFreeKeywords.Concat(freeDecalres).ToArray();
                 }
+
+                // with the new list find the key word
                 kwl = (from itm in allFreeKeywords
                        where itm == kw
                        select itm).FirstOrDefault();
 
+                // keyword not found retun identifier token
                 if (kwl == null)
                     return TokenKind.TK_IDENTIFIER;
 
