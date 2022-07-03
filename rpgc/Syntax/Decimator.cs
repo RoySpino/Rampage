@@ -1619,9 +1619,9 @@ namespace rpgc.Syntax
                             // +=,-=,*=,/= factor 2 to factor 3
                             ret.AddRange(doLex(RESULT));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_ASSIGN, RESULT.linePos, (RESULT.chrPos), OpCode, RESULT.chrPos));
-                            ret.AddRange(doLex(FAC2));
-                            ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
                             ret.AddRange(doLex(RESULT));
+                            ret.Add(new SyntaxToken(sTree_, SyntaxFacts.getKeywordKind(OP.symbol), OP.linePos, OP.chrPos, OpCode, OP.chrPos));
+                            ret.AddRange(doLex(FAC2));
                             ret.Add(new SyntaxToken(sTree_ ,TokenKind.TK_NEWLINE, OP.linePos, (OP.chrPos), "", OP.chrPos));
                         }
                         else
