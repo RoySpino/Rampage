@@ -1017,7 +1017,10 @@ namespace rpgc.Syntax
 
             // check if user has writen a fixed format program 
             if (checkFree() == false)
-                return doStructLex2();
+            {
+                var xtn = doStructLex2();
+                return xtn;
+            }
 
             // get tokens
             do

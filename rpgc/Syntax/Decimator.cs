@@ -1312,17 +1312,20 @@ namespace rpgc.Syntax
                     case 'H':
                         lst = decimateHSpec(lineNo, tmp);
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                        diagnostics.reportBadSpec(new TextLocation(source, new TextSpan(1, 1, lineNo, linePos)), Specification, lineNo);
                         break;
                     case 'F':
                         lst = decimateFSpec(lineNo, tmp);
                         ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[0].linePos, lst[0].chrPos, "", lst[0].chrPos));
+                        diagnostics.reportBadSpec(new TextLocation(source, new TextSpan(1, 1, lineNo, linePos)), Specification, lineNo);
                         break;
                     case 'D':
                         lst = decimateDSpec(lineNo, tmp);
                         ret.AddRange(dSpecRectifier(lst));
                         break;
                     case 'I':
-                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, linePos, 0, "", 1));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos));
+                        diagnostics.reportBadSpec(new TextLocation(source, new TextSpan(1, 1, lineNo, linePos)), Specification, lineNo);
                         break;
                     case 'C':
 
@@ -1479,14 +1482,16 @@ namespace rpgc.Syntax
                         ret.AddRange(cSpecRectifier(lst));
                         break;
                     case 'O':
-                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos));
+                        diagnostics.reportBadSpec(new TextLocation(source, new TextSpan(1, 1, lineNo, linePos)), Specification, lineNo);
                         break;
                     case 'P':
                         lst = decimatePSpec(lineNo, tmp);
                         ret.AddRange(pSpecRectifier(lst));
                         break;
                     default:
-                        ret = new List<SyntaxToken>(new SyntaxToken[] { new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos) });
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lineNo, 0, "", linePos));
+                        diagnostics.reportBadSpec(new TextLocation(source, new TextSpan(1,1, lineNo, linePos)), Specification, lineNo);
                         break;
                 }
 
