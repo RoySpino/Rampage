@@ -80,6 +80,7 @@ namespace rpgc.Syntax
                 case TokenKind.TK_EXSR:
                      return parseSubroutineCall();
                 case TokenKind.TK_BADTOKEN:
+                    nextToken();
                     return new ErrorExpressionSyntax(_sTree);
                 case TokenKind.TK_IDENTIFIER:
                 default:
@@ -123,6 +124,7 @@ namespace rpgc.Syntax
                 case TokenKind.TK_CAB:
                     return parseCabStaement();
                 case TokenKind.TK_BADTOKEN:
+                    nextToken();
                     return new ErrorStatementSyntax(_sTree);
                 default:
                     return parseExpressionStaement();
