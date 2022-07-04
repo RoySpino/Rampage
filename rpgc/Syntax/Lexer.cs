@@ -501,6 +501,7 @@ namespace rpgc.Syntax
                             diagnostics.reportBadCharacter(location, curChar, 1);
                             Value = "";
                             symbol = curChar.ToString();
+                            kind = TokenKind.TK_BADTOKEN;
                             nextChar();
                         }
                     }
