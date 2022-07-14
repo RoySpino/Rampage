@@ -373,6 +373,14 @@ namespace rpgc.Syntax
                 case "%SQRT":
                 case "%LEN":
                 case "%XLATE":
+                case "%SHIFTL":
+                case "%SHIFTR":
+                case "%BITAND":
+                case "%BITOR":
+                case "%BITNOT":
+                case "%BITANDNOT":
+                case "%BITXOR":
+                case "%FLOAT":
                     return TokenKind.TK_IDENTIFIER;
                 default:
                     return TokenKind.TK_BADTOKEN;

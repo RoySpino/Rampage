@@ -894,6 +894,7 @@ namespace rpgc.Syntax
         private static string readBuiltInFunctions()
         {
             string symbol = "";
+            TextLocation location;
 
             start += pos;
             symbol = "%";
@@ -908,6 +909,12 @@ namespace rpgc.Syntax
             symbol = symbol.Trim().ToUpper();
             Value = symbol;
             kind = SyntaxFacts.getBuiltInFunction(symbol);
+
+            if (kind == TokenKind.TK_BADTOKEN)
+            {
+                location = new TextLocation(source, new TextSpan(start, symbol.Length, linePos, pos+start));
+                diagnostics.reportUnknownBuiltInFunciton(location, symbol);
+            }
 
             return symbol;
         }

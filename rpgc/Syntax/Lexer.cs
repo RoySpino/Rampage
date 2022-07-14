@@ -764,6 +764,7 @@ namespace rpgc.Syntax
         private string readBuiltInFunctions()
         {
             string symbol = "";
+            TextLocation location;
 
             start = pos;
             symStart = linePos;
@@ -778,6 +779,12 @@ namespace rpgc.Syntax
 
             Value = symbol.Trim().ToUpper();
             kind = SyntaxFacts.getBuiltInFunction(Value.ToString());
+
+            if (kind == TokenKind.TK_BADTOKEN)
+            {
+                location = new TextLocation(source, new TextSpan(start, symbol.Length, lineNum, linePos));
+                diagnostics.reportUnknownBuiltInFunciton(location, symbol);
+            }
 
             return symbol;
         }

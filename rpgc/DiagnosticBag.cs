@@ -634,6 +634,17 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportUnknownBuiltInFunciton(TextLocation txtLoc, string symbol)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({0},{1}): error: The name `{2}' does not exist in the current context", span.LineNo, span.LinePos, symbol);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         internal void reportVariableWithNoName(TextLocation txtLoc)
         {
             string message;

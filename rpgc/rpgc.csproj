@@ -118,6 +118,7 @@
     <Compile Include="Repl.cs" />
     <Compile Include="RpgRepl.cs" />
     <Compile Include="Symbols\BuiltinFunctions.cs" />
+    <Compile Include="Symbols\BuiltinFunctions_Definitions.cs" />
     <Compile Include="Symbols\FuncitonSymbol.cs" />
     <Compile Include="Symbols\GlobalVariableSymbol.cs" />
     <Compile Include="Symbols\LocalVariableSymbol.cs" />

@@ -37,6 +37,17 @@ namespace rpgc.Symbols
         public static readonly FunctionSymbol BIF_Checkr = new FunctionSymbol("%CHECKR", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char), new ParamiterSymbol("B", TypeSymbol.Char)), TypeSymbol.Integer);
         public static readonly FunctionSymbol BIF_Editw = new FunctionSymbol("%EDITW", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char), new ParamiterSymbol("B", TypeSymbol.Char)), TypeSymbol.Char);
 
+        public static readonly FunctionSymbol BIF_Bitand = new FunctionSymbol("%BITAND", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer), new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Bitor = new FunctionSymbol("%BITOR", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer), new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Bitxor = new FunctionSymbol("%BITXOR", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer), new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Bitnot = new FunctionSymbol("%BITNOT", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Bitandnot = new FunctionSymbol("%BITANDNOT", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer), new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+
+        public static readonly FunctionSymbol BIF_ShiftL = new FunctionSymbol("%SHIFTL", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer), new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_ShiftR = new FunctionSymbol("%SHIFTR", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Integer), new ParamiterSymbol("B", TypeSymbol.Integer)), TypeSymbol.Integer);
+        public static readonly FunctionSymbol BIF_Float = new FunctionSymbol("%FLOAT", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char)), TypeSymbol.Float);
+        public static readonly FunctionSymbol BIF_Trimr = new FunctionSymbol("%TRIMR", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char)), TypeSymbol.Char);
+        public static readonly FunctionSymbol BIF_Triml = new FunctionSymbol("%TRIML", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char)), TypeSymbol.Char);
 
         internal static IEnumerable<FunctionSymbol> getAll()
         {

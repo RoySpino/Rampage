@@ -369,268 +369,132 @@ namespace rpgc
         private object evaluateCallExpression(BoundCallExpression node)
         {
             BoundBlockStatement stmnt = null;
+            string fromStr, source, msg, Val, Val0, Val1, Val2;
+            int iVal, iVal0, iVal1, iVal2;
 
-            if (node.Function == rpgc.Symbols.BuiltinFunctions.cin)
-                return Console.ReadLine();
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.cout)
+            switch (node.Function.Name)
             {
-                string msg = reEvaluate((node.Arguments[0])).ToString();
-                Console.WriteLine(msg);
-                return null;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.dsply)
-            {
-                string msg = reEvaluate((node.Arguments[0])).ToString();
-                Console.WriteLine(msg);
-                return null;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Int)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                try
-                {
-                    return Convert.ToInt32(Val);
-                }
-                catch (Exception)
-                {
-                    throw new Exception($"Input string ‘{Val}’ was not in a correct format");
-                }
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_char)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return Val;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Log)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return (int)Math.Log(Convert.ToDouble(Val));
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Log10)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return (int)(Math.Log(Convert.ToDouble(Val)) / Math.Log(10.0));
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_abs)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return (int)Math.Abs(Convert.ToDouble(Val));
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Sqrt)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return (int)Math.Sqrt(Convert.ToDouble(Val));
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rem)
-            {
-                string Val0 = reEvaluate((node.Arguments[0])).ToString();
-                string Val1 = reEvaluate((node.Arguments[1])).ToString();
-                return (int)((Convert.ToDouble(Val0) % Convert.ToDouble(Val1)));
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Len)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return Val.Length;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Lower)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return Val.ToLower();
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Upper)
-            {
-                string Val = reEvaluate((node.Arguments[0])).ToString();
-                return Val.ToUpper();
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Subst)
-            {
-                string Val0 = reEvaluate((node.Arguments[0])).ToString();
-                string Val1 = reEvaluate((node.Arguments[1])).ToString();
-                string Val2 = reEvaluate((node.Arguments[2])).ToString();
-                string result;
-                int sidx, len;
+                case "CIN":
+                    return Console.ReadLine();
+                case "COUT":
+                case "DSPLY":
+                    Console.WriteLine(reEvaluate(node.Arguments[0]));
+                    return null;
+                case "%INT":
+                    return BuiltinFunctions_Definitions.BIF_INT(reEvaluate(node.Arguments[0]));
+                case "%CHAR":
+                    return BuiltinFunctions_Definitions.BIF_CHAR(reEvaluate((node.Arguments[0])));
+                case "%LOG":
+                    return (int)BuiltinFunctions_Definitions.BIF_LOG(reEvaluate(node.Arguments[0]));
+                case "%LOG10":
+                    return (int)BuiltinFunctions_Definitions.BIF_LOG10(reEvaluate(node.Arguments[0]));
+                case "%ABS":
+                    return (int)BuiltinFunctions_Definitions.BIF_ABS(reEvaluate(node.Arguments[0]));
+                case "%SQRT":
+                    return BuiltinFunctions_Definitions.BIF_SQRT(reEvaluate(node.Arguments[0]));
+                case "%REM":
+                    return BuiltinFunctions_Definitions.BIF_REM(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%LEN":
+                    return BuiltinFunctions_Definitions.BIF_LEN(reEvaluate(node.Arguments[0]));
+                case "%LOWER":
+                    return BuiltinFunctions_Definitions.BIF_LOWER(reEvaluate(node.Arguments[0]));
+                case "%UPPER":
+                    return BuiltinFunctions_Definitions.BIF_UPPER(reEvaluate(node.Arguments[0]));
+                case "%SUBST":
+                    return BuiltinFunctions_Definitions.BIF_SUBST(
+                        reEvaluate(node.Arguments[0]).ToString(),
+                        reEvaluate(node.Arguments[1]).ToString(),
+                        reEvaluate(node.Arguments[2]).ToString());
+                case "%RAND":
+                    return BuiltinFunctions_Definitions.BIF_RAND(reEvaluate((node.Arguments[0])));
+                case "%DIV":
+                    return BuiltinFunctions_Definitions.BIF_DIV(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%SCAN":
+                    return BuiltinFunctions_Definitions.BIF_SCAN(
+                        reEvaluate(node.Arguments[0]), 
+                        reEvaluate(node.Arguments[1]));
+                case "%REPLACE":
+                    return BuiltinFunctions_Definitions.BIF_REPLACE(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]),
+                        reEvaluate(node.Arguments[2]),
+                        reEvaluate(node.Arguments[3]));
+                case "%TRIM":
+                    return BuiltinFunctions_Definitions.BIF_TRIM(reEvaluate((node.Arguments[0])));
+                case "%XLATE":
+                    return BuiltinFunctions_Definitions.BIF_XLATE(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]),
+                        reEvaluate(node.Arguments[2]));
+                case "%CHECK":
+                    return BuiltinFunctions_Definitions.BIF_CHECK(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%CHECKR":
+                    return BuiltinFunctions_Definitions.BIF_CHECKR(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%EDITW":
+                    return BuiltinFunctions_Definitions.BIF_EDITW(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%SHIFTL":
+                    return BuiltinFunctions_Definitions.BIF_SHIFTL(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%SHIFTR":
+                    return BuiltinFunctions_Definitions.BIF_SHIFTR(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%BITAND":
+                    return BuiltinFunctions_Definitions.BIF_BITAND(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%BITOR":
+                    return BuiltinFunctions_Definitions.BIF_BITOR(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%BITXOR":
+                    return BuiltinFunctions_Definitions.BIF_BITXOR(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%BITNOT":
+                    return BuiltinFunctions_Definitions.BIF_BITNOT(reEvaluate(node.Arguments[0]));
+                case "%BITANDNOT":
+                    return BuiltinFunctions_Definitions.BIF_BITANDNOT(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
+                case "%TRIMR":
+                    return BuiltinFunctions_Definitions.BIF_TRIMR(reEvaluate(node.Arguments[0]));
+                case "%TRIML":
+                    return BuiltinFunctions_Definitions.BIF_TRIML(reEvaluate(node.Arguments[0]));
+                case "%FLOAT":
+                    return BuiltinFunctions_Definitions.BIF_FLOAT(reEvaluate(node.Arguments[0]));
+                default:
+                    // handle programmer defigned procedures/subrutines
+                    ParamiterSymbol paramiter;
+                    object vValue, result;
+                    Dictionary<VariableSymbol, object> lcals;
 
-                sidx = Convert.ToInt32(Val1) - 1;
-                len = Convert.ToInt32(Val2);
-                result = Val0.Substring(sidx, len);
+                    lcals = new Dictionary<VariableSymbol, object>();
 
-                return result;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Rand)
-            {
-                int max;
-                string Val0 = reEvaluate((node.Arguments[0])).ToString();
-
-                if (randnum == null)
-                    randnum = new Random();
-
-                max = Convert.ToInt32(Val0);
-                return randnum.Next(max);
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_div)
-            {
-                int Val0 = Convert.ToInt32(reEvaluate((node.Arguments[0])));
-                int Val1 = Convert.ToInt32(reEvaluate((node.Arguments[1])));
-
-                return (int)(Val0 / Val1);
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Scan)
-            {
-                string whatToFind = reEvaluate((node.Arguments[0])).ToString();
-                string source = reEvaluate((node.Arguments[1])).ToString();
-                int idx;
-
-                idx = source.IndexOf(whatToFind) + 1;
-
-                return idx;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Replace)
-            {
-                string wrdValue = reEvaluate((node.Arguments[0])).ToString();
-                string source = reEvaluate((node.Arguments[1])).ToString();
-                int startIndex = Convert.ToInt32(reEvaluate((node.Arguments[2])));
-                int length = Convert.ToInt32(reEvaluate((node.Arguments[3])));
-                string tmp;
-
-                tmp = wrdValue.Substring(0, length);
-
-                if ((startIndex + length) >= source.Length)
-                    return (source.Substring(0, startIndex - 1) + tmp);
-
-                tmp = source.Substring(0, startIndex - 1) + tmp + source.Substring((startIndex + length - 1));
-                return tmp;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Trim)
-            {
-                string value = reEvaluate((node.Arguments[0])).ToString();
-
-                value = value.Trim();
-                return value;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Xlate)
-            {
-                string fromStr, toStr, source, res;
-                int lim;
-
-                fromStr = reEvaluate((node.Arguments[0])).ToString();
-                toStr = reEvaluate((node.Arguments[1])).ToString();
-                source = reEvaluate((node.Arguments[2])).ToString();
-
-                // get the smallest length as the limit
-                lim = fromStr.Length;
-                if (lim > toStr.Length)
-                    lim = toStr.Length;
-
-                // perform translation
-                res = source;
-                for (int i = 0; i < lim; i++)
-                {
-                    // dont only if symbol is in string
-                    if (res.Contains(fromStr[i]) == true)
-                        res = res.Replace(fromStr[i], toStr[i]);
-                }
-
-                return res;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Check)
-            {
-                string fromStr, source;
-                int idx;
-
-                fromStr = reEvaluate((node.Arguments[0])).ToString();
-                source = reEvaluate((node.Arguments[1])).ToString();
-
-                var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
-                idx = mtch.Index;
-
-                return idx + 1;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Checkr)
-            {
-                string fromStr, source;
-                int idx;
-
-                fromStr = reEvaluate((node.Arguments[0])).ToString();
-                source = reEvaluate((node.Arguments[1])).ToString();
-
-                source.Reverse();
-                fromStr.Reverse();
-                var mtch = System.Text.RegularExpressions.Regex.Match(source, $"[^{fromStr}]");
-                idx = mtch.Index;
-                idx = (source.Length - 1) - idx;
-
-                return idx + 1;
-            }
-            else if (node.Function == rpgc.Symbols.BuiltinFunctions.BIF_Editw)
-            {
-                int idx, flim;
-                char ch;
-                string ret, fmt, inp;
-
-                fmt = reEvaluate((node.Arguments[0])).ToString();
-                inp = reEvaluate((node.Arguments[1])).ToString();
-
-                ret = "";
-                flim = fmt.Length - 1;
-                idx = inp.Length - 1;
-
-                //foreach (char ch in nfmt)
-                for (int i=flim; i > -1; i--)
-                {
-                    ch = fmt[i];
-
-                    if (ch != ' ')
+                    for (int i = 0; i < node.Arguments.Length; i++)
                     {
-                        ret = ch + ret;
-                        continue;
+                        paramiter = node.Function.Paramiter[i];
+                        vValue = reEvaluate(node.Arguments[i]);
+                        lcals.Add(paramiter, vValue);
                     }
+                    _locals.Push(lcals);
 
-                    // apply input string to the returning string
-                    if (idx > -1)
-                    {
-                        ret = inp[idx] + ret;
-                        idx -= 1;
-                    }
-                    else
-                    {
-                        // at the end of the input string 
-                        // apply the format string
-                        ret = ch + ret;
-                    }
-                }
+                    stmnt = _functions[node.Function];
+                    result = EvaluateStatment(stmnt);
 
-                // input string is longer than format
-                if (idx > -1)
-                    while (idx > -1)
-                    {
-                        ret = inp[idx] + ret;
-                        idx -= 1;
-                    }
-
-                return ret;
-            }
-            else
-            {
-                // handle programmer defigned procedures/subrutines
-                ParamiterSymbol paramiter;
-                object vValue, result;
-                Dictionary<VariableSymbol, object> lcals;
-
-                lcals = new Dictionary<VariableSymbol, object>();
-
-                for (int i = 0; i < node.Arguments.Length; i++)
-                {
-                    paramiter = node.Function.Paramiter[i];
-                    vValue = reEvaluate(node.Arguments[i]);
-                    lcals.Add(paramiter, vValue);
-                }
-                _locals.Push(lcals);
-
-                stmnt = _functions[node.Function];
-                result = EvaluateStatment(stmnt);
-
-                _locals.Pop();
-                return result;
+                    _locals.Pop();
+                    return result;
             }
         }
 
