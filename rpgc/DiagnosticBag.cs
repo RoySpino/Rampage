@@ -852,6 +852,17 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportMisingDataSetType(TextLocation textLocation, int linePos, int chrPos)
+        {
+            string message;
+            TextSpan span = textLocation.SPAN;
+
+            message = string.Format("({0},{1}): error: D-spec missing Data set Type. Are you missing a Pr or Pi", span.LineNo, span.LinePos);
+
+            report(textLocation, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         public IEnumerator<Diagnostics> GetEnumerator()
         {
             return _diagnostic.GetEnumerator();
