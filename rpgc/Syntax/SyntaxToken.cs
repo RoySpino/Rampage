@@ -225,6 +225,9 @@ namespace rpgc.Syntax
         TK_NEWLINE,
         TK_ENDPR,
         TK_ENDDS,
-        TK_END
+        TK_END,
+        TK_ARRIDXR,
+        TK_ARRIDXL,
+        TK_DIM
     }
 }

@@ -474,6 +474,11 @@ namespace rpgc
                     return BuiltinFunctions_Definitions.BIF_TRIML(reEvaluate(node.Arguments[0]));
                 case "%FLOAT":
                     return BuiltinFunctions_Definitions.BIF_FLOAT(reEvaluate(node.Arguments[0]));
+                case "%SCANRPL":
+                    return BuiltinFunctions_Definitions.BIF_SCANRPL(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]),
+                        reEvaluate(node.Arguments[2]));
                 default:
                     // handle programmer defigned procedures/subrutines
                     ParamiterSymbol paramiter;
