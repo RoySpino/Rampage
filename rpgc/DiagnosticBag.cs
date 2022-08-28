@@ -579,6 +579,17 @@ namespace rpgc
         }
 
         // //////////////////////////////////////////////////////////////////////////
+        internal void reportGreekQuestionmark(TextLocation txtLoc)
+        {
+            string message;
+            TextSpan span = txtLoc.SPAN;
+
+            message = string.Format("({0},{1}): error: greek question mark was used here", span.LineNo, span.LinePos);
+
+            report(txtLoc, message);
+        }
+
+        // //////////////////////////////////////////////////////////////////////////
         internal void reportFunctionParamiterTypeMismatch(TextLocation txtLoc, TypeSymbol type1, TypeSymbol type2)
         {
             string message;

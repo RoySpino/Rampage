@@ -386,6 +386,7 @@ namespace rpgc.Syntax
                     Value = "_";
                     break;
                 case ';':
+                case (char)894:
                     start += 1;
                     kind = TokenKind.TK_SEMI;
                     Value = ";";
@@ -509,6 +510,21 @@ namespace rpgc.Syntax
             }
 
             return new SyntaxToken(_SyntaxTree, kind, lineNum, start, Value, symStart);
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private void readGreekQuestionmark()
+        {
+            TextLocation location;
+
+            start += 1;
+            kind = TokenKind.TK_SEMI;
+            Value = ";";
+            onEvalLine = true;
+            nextChar();
+
+            location = new TextLocation(source, new TextSpan(start, 1, linePos, pos));
+            diagnostics.reportGreekQuestionmark(location);
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////

@@ -533,6 +533,7 @@ namespace rpgc.Syntax
                         nextChar();
                         break;
                     case ';':
+                    case (char)894:
                         start = pos;
                         kind = (isFreeBlock == true? TokenKind.TK_NEWLINE: TokenKind.TK_BADTOKEN);
                         Value = ";";
@@ -667,6 +668,18 @@ namespace rpgc.Syntax
             }
 
             return ret;
+        }
+
+        // ////////////////////////////////////////////////////////////////////////////////////
+        private static void readGreekQuestionmark()
+        {
+            start = pos;
+            kind = TokenKind.TK_SUB;
+            Value = "-";
+            nextChar();
+
+            location = new TextLocation(source, new TextSpan(start, 1, linePos, pos));
+            diagnostics.reportGreekQuestionmark(location);
         }
 
         // ////////////////////////////////////////////////////////////////////////////////////
