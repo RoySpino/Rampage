@@ -388,7 +388,7 @@ namespace rpgc.Symbols
         // /////////////////////////////////////////////////////////////////
         public static int BIF_BITNOT(Object A)
         {
-            int val1, val2;
+            int val1;
 
             val1 = Convert.ToInt32(A);
 
@@ -404,6 +404,18 @@ namespace rpgc.Symbols
             val2 = Convert.ToInt32(B);
 
             return ~(val1 & val2);
+        }
+
+        // /////////////////////////////////////////////////////////////////
+        public static string BIF_SCANRPL(Object A, Object B, Object C)
+        {
+            string val1, val2, val3;
+
+            val1 = A.ToString();
+            val2 = B.ToString();
+            val3 = C.ToString();
+
+            return val3.Replace(val1, val2);
         }
     }
 }

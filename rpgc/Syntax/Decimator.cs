@@ -2178,6 +2178,7 @@ namespace rpgc.Syntax
         public static List<SyntaxToken> dSpecRectifier(List<StructNode> lst)
         {
             List<SyntaxToken> ret = new List<SyntaxToken>();
+            TextLocation ntl;
             string dclType;
 
             dclType = lst[3].symbol;
@@ -2227,11 +2228,19 @@ namespace rpgc.Syntax
                     break;
                 default:
                     // PR and PI block paramiters
-                    // add paramiter
-                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
-                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
-                    ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
-
+                    if (DBlockType == null)
+                    {
+                        ntl = new TextLocation(sTree_.TEXT, new TextSpan(lst[3].chrPos, 2, lst[3].linePos, lst[3].chrPos));
+                        diagnostics.reportMisingDataSetType(ntl, lst[3].linePos, lst[3].chrPos);
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_BADTOKEN, lst[3].linePos, lst[3].chrPos, "  ", lst[3].linePos));
+                    }
+                    else
+                    {
+                        // add paramiter
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[0].linePos, (lst[0].chrPos), lst[0].symbol, lst[1].chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_IDENTIFIER, lst[6].linePos, (lst[6].chrPos), lst[6].symbol, lst[6].chrPos));
+                        ret.Add(new SyntaxToken(sTree_, TokenKind.TK_NEWLINE, (lst[0].linePos), 0, "", lst[0].chrPos));
+                    }
                     break;
             }
 

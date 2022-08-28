@@ -49,6 +49,8 @@ namespace rpgc.Symbols
         public static readonly FunctionSymbol BIF_Trimr = new FunctionSymbol("%TRIMR", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char)), TypeSymbol.Char);
         public static readonly FunctionSymbol BIF_Triml = new FunctionSymbol("%TRIML", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char)), TypeSymbol.Char);
 
+        public static readonly FunctionSymbol BIF_Scanrpl = new FunctionSymbol("%SCANRPL", ImmutableArray.Create(new ParamiterSymbol("A", TypeSymbol.Char), new ParamiterSymbol("B", TypeSymbol.Char), new ParamiterSymbol("C", TypeSymbol.Integer)), TypeSymbol.Char);
+
         internal static IEnumerable<FunctionSymbol> getAll()
         {
             FunctionSymbol[] ret;
