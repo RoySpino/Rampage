@@ -28,8 +28,8 @@ namespace rpgc
 
                 /*
                 */
-                //string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\RPMult.rpg" };
-                string[] ar = { @"D:\Documents\CodeSnipets\RPG\rmshift.rpg" };
+                string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\test9.rpgle" };
+                //string[] ar = { @"D:\Documents\CodeSnipets\RPG\rmshift.rpg" };
                 //string[] ar = { @"G:\Documents\codeSnipets\RPG\RampageTest\cab.rpg" };
                 doCompile(ar);
             }

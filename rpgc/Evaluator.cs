@@ -12,14 +12,15 @@ namespace rpgc
     internal sealed class Evaluator
     {
         private readonly BoundProgram program;
-        private readonly BoundBlockStatement ROOT;
-        private readonly BoundGlobalScope globals;
         Dictionary<VariableSymbol, object> _Globals;
         Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
         private object lastValue;
-        private Random randnum;
         private readonly ImmutableDictionary<FunctionSymbol, BoundBlockStatement> FunctionBodies;
+
+        //private readonly BoundBlockStatement ROOT;
+        //private readonly BoundGlobalScope globals;
+        //private Random randnum;
 
 
         public Evaluator(BoundProgram pgm, Dictionary<VariableSymbol, object> _variables)
@@ -29,7 +30,7 @@ namespace rpgc
             program = pgm;
             _Globals = _variables;
             _locals.Push(new Dictionary<VariableSymbol, object>());
-            globals = pgm.GblScope;
+            //globals = pgm.GblScope;
 
             // step through all funcitons and 
             c = program;
@@ -47,16 +48,16 @@ namespace rpgc
         public Evaluator(BoundBlockStatement root, Dictionary<VariableSymbol, object> _variables)
         {
             program = null;
-            ROOT = root;
             _Globals = _variables;
+            //ROOT = root;
         }
 
         // //////////////////////////////////////////////////////////////
         public Evaluator(ImmutableDictionary<FunctionSymbol, BoundBlockStatement> _functionBodies, BoundBlockStatement st, Dictionary<VariableSymbol, object> variables)
         {
             FunctionBodies = _functionBodies;
-            ROOT = st;
             _Globals = variables;
+            //ROOT = st;
         }
 
         // //////////////////////////////////////////////////////////////
@@ -369,8 +370,6 @@ namespace rpgc
         private object evaluateCallExpression(BoundCallExpression node)
         {
             BoundBlockStatement stmnt = null;
-            string fromStr, source, msg, Val, Val0, Val1, Val2;
-            int iVal, iVal0, iVal1, iVal2;
 
             switch (node.Function.Name)
             {
@@ -479,6 +478,10 @@ namespace rpgc
                         reEvaluate(node.Arguments[0]),
                         reEvaluate(node.Arguments[1]),
                         reEvaluate(node.Arguments[2]));
+                case "%CONCAT":
+                    return BuiltinFunctions_Definitions.BIF_CONCAT(
+                        reEvaluate(node.Arguments[0]),
+                        reEvaluate(node.Arguments[1]));
                 default:
                     // handle programmer defigned procedures/subrutines
                     ParamiterSymbol paramiter;

@@ -382,6 +382,7 @@ namespace rpgc.Syntax
                 case "%BITXOR":
                 case "%FLOAT":
                 case "%SCANRPL":
+                case "%CONCAT":
                     return TokenKind.TK_IDENTIFIER;
                 default:
                     return TokenKind.TK_BADTOKEN;

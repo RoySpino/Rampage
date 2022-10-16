@@ -417,5 +417,16 @@ namespace rpgc.Symbols
 
             return val3.Replace(val1, val2);
         }
+
+        // /////////////////////////////////////////////////////////////////
+        public static string BIF_CONCAT(Object A, Object B)
+        {
+            string val1, val2;
+
+            val1 = A.ToString();
+            val2 = B.ToString();
+
+            return (val1 + val2);
+        }
     }
 }
