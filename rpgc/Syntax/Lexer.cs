@@ -18,7 +18,7 @@ namespace rpgc.Syntax
         int pos, lineNum, sSize, peekPos;
         char curChar;
         DiagnosticBag diagnostics = new DiagnosticBag();
-        bool onEvalLine = true, doAddMainFunciton, doAddMainProcSrt= true, doAddMainProcEnd, onStartCSpec, onEndCSpec;
+        bool onEvalLine = true, doAddMainProcSrt= true, doAddMainFunciton, doAddMainProcEnd, onStartCSpec, onEndCSpec;
         List<SyntaxToken> strucLexLine = new List<SyntaxToken>();
         int parenCnt = 0, linePos;
         string lineType = "";
@@ -1071,7 +1071,10 @@ namespace rpgc.Syntax
                     */
                     if (doAddMainProcSrt == false)
                         if (tok.kind == TokenKind.TK_EOI || isProcSection == true)
+                        {
                             ret.AddRange(SyntaxFacts.prepareMainFunction(_SyntaxTree, TokenKind.TK_SEMI, false));
+                            doAddMainFunciton = false;
+                        }
                 }
 
                 // add extra tokens before the lexed token
